@@ -1,7 +1,7 @@
 import sqlite3 from 'sqlite3';
 import * as dotenv from 'dotenv';
 dotenv.config();
-import { getOperators } from './transit-data.js'
+import { getOperators, getVehiclePositions } from './transit-data.js'
 
 function connectDB() {
   const db = new sqlite3.Database('dashaboard.db', (error) => {
@@ -14,7 +14,7 @@ function connectDB() {
 }
 
 function createOperatorsTable(db) {
-  db.exec(`
+  db.run(`
   CREATE TABLE operators
   (
     id TEXT PRIMARY KEY,
@@ -39,5 +39,25 @@ async function updateOperators(db) {
   });
 }
 
+function deleteOperators(db) {
+  db.run('DELETE FROM operators');
+}
+
+async function createPositionsTable(db) {
+  db.run(`
+  CREATE TABLE positions
+  (
+    id TEXT PRIMARY KEY,
+    operator TEXT,
+    trip_id TEXT,
+    vehicle_id TEXT,
+    route_id TEXT,
+    direction_id INT,
+    latitude REAL,
+    longitude REAL,
+    bearing REAL,
+    speed REAL
+  )
+  `)
+}
 const db = connectDB();
-updateOperators(db);
