@@ -22,3 +22,22 @@ function createOperatorsTable(db) {
   )
   `);
 }
+
+async function updateOperators(db) {
+  const data = await getOperators();
+  data.forEach((operator) => {
+    console.log(operator);
+    const operatorData = [operator.Id, operator.Name]
+    console.log(operatorData)
+    db.run('INSERT INTO operators(id, name) VALUES (?, ?)', operatorData, (error) => {
+      if (error) {
+        console.error(error.message);
+      } else {
+        console.log(`Inserted ${operator.Name} (${operator.Id})`);
+      }
+    });
+  });
+}
+
+const db = connectDB();
+updateOperators(db);
