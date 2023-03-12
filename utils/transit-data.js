@@ -104,4 +104,4 @@ const saveGTFSDataFeed = async (agency) => {
     })
 }
 
-export { getVehiclePositions, getTripUpdates, getGTFSDataFeed, saveGTFSDataFeed }
+export { getOperators, getVehiclePositions, getTripUpdates, getGTFSDataFeed, saveGTFSDataFeed }

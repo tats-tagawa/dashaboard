@@ -1,6 +1,6 @@
 import axios from 'axios';
 import express from 'express';
-import { getTripUpdates } from '../transit-data.js';
+import { getTripUpdates } from '../utils/transit-data.js';
 
 const info = express.Router();
 
