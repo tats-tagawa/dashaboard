@@ -12,5 +12,5 @@ app.use('/realtime', realtime);
 app.use('/info', info);
 
 app.listen(port, () => {
-    console.log(`Dashaboard listening on port ${port}`);
+  console.log(`Dashaboard listening on port ${port}`);
 });
