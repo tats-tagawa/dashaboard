@@ -69,12 +69,13 @@ async function updatePositions(db) {
   positions.forEach((position) => {
     if (position.vehicle.trip) {
       const [operator, tripId] = position.vehicle.trip.tripId.split(':');
+      const [_, routeId] = position.vehicle.trip.routeId.split(':');
       const data = [
         `${position.vehicle.trip.tripId}:${position.vehicle.vehicle.id}`,
         operator,
         tripId,
         position.vehicle.vehicle.id,
-        position.vehicle.trip.routeId,
+        routeId,
         position.vehicle.trip.directionId,
         position.vehicle.position.latitude,
         position.vehicle.position.longitude,
