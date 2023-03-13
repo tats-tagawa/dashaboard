@@ -20,7 +20,8 @@ app.listen(port, () => {
 });
 
 const db = connectDB();
-app.get('/positions', async (req, res) => {
-  const positions = await getPositions(db);
+
+app.get('/positions/:operator', async (req, res) => {
+  const positions = await getPositions(db, req.params.operator);
   res.send(positions)
 })

@@ -28,17 +28,11 @@ map.on('load', async () => {
       'circle-stroke-color': '#FFFFFF'
     }
   })
-
 });
 
-async function getPositions() {
-  const response = await fetch('http://localhost:3000/positions');
-  const data = await response.json();
-  return data
-}
-
-async function processPositions() {
-  const positions = await getPositions();
+async function processPositions(operator = 'RG') {
+  const response = await fetch(`http://localhost:3000/positions/${operator}`);
+  const positions = await response.json();
   const positionsGeoJSON = [];
   for (const position of positions) {
     const coordinates = [position.longitude, position.latitude];
