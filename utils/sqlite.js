@@ -109,4 +109,4 @@ function getPositions(db) {
   });
 }
 
-const db = connectDB();
+export { connectDB, getPositions }
