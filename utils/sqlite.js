@@ -87,19 +87,26 @@ async function updatePositions(db) {
         VALUES
         (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, data, (error) => {
-          if (error) {
-            console.error(error);
-          } else {
-            console.log(`Inserted ${operator} - ${tripId}`);
-          }
-        });
+        if (error) {
+          console.error(error);
+        } else {
+          console.log(`Inserted ${operator} - ${tripId}`);
+        }
+      });
     }
   });
 }
 
+function getPositions(db) {
+  return new Promise((resolve, reject) => {
+    db.all('SELECT * FROM positions', (error, rows) => {
+      if (error) {
+        return reject(error);
+      } else {
+        return resolve(rows);
+      }
+    })
+  });
+}
+
 const db = connectDB();
-updatePositions(db);
-setInterval(() => {
-  updatePositions(db);
-  console.log('updated');
-}, 30000)
