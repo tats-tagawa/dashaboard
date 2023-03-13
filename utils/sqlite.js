@@ -24,11 +24,10 @@ function createOperatorsTable(db) {
 }
 
 async function updateOperators(db) {
-  const data = await getOperators();
-  data.forEach((operator) => {
+  const operators = await getOperators();
+  operators.forEach((operator) => {
     console.log(operator);
     const operatorData = [operator.Id, operator.Name]
-    console.log(operatorData)
     db.run('INSERT INTO operators(id, name) VALUES (?, ?)', operatorData, (error) => {
       if (error) {
         console.error(error.message);
@@ -60,4 +59,47 @@ async function createPositionsTable(db) {
   )
   `)
 }
+function deletePositions(db) {
+  db.run('DELETE FROM positions')
+}
+
+async function updatePositions(db) {
+  deletePositions(db)
+  const positions = await getVehiclePositions();
+  positions.forEach((position) => {
+    if (position.vehicle.trip) {
+      const [operator, tripId] = position.vehicle.trip.tripId.split(':');
+      const data = [
+        `${position.vehicle.trip.tripId}:${position.vehicle.vehicle.id}`,
+        operator,
+        tripId,
+        position.vehicle.vehicle.id,
+        position.vehicle.trip.routeId,
+        position.vehicle.trip.directionId,
+        position.vehicle.position.latitude,
+        position.vehicle.position.longitude,
+        position.vehicle.position.bearing,
+        position.vehicle.position.speed,
+      ];
+      db.run(`
+        INSERT INTO positions
+        (id, operator, trip_id, vehicle_id, route_id, direction_id, latitude, longitude, bearing, speed)
+        VALUES
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `, data, (error) => {
+          if (error) {
+            console.error(error);
+          } else {
+            console.log(`Inserted ${operator} - ${tripId}`);
+          }
+        });
+    }
+  });
+}
+
 const db = connectDB();
+updatePositions(db);
+setInterval(() => {
+  updatePositions(db);
+  console.log('updated');
+}, 30000)
