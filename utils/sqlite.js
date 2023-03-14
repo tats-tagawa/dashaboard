@@ -115,4 +115,4 @@ function getPositions(db, operator) {
   });
 }
 
-export { connectDB, getPositions }
+export { connectDB, getPositions, updatePositions }
