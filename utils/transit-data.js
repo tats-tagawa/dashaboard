@@ -8,7 +8,7 @@ import JSZip from 'jszip';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const getOperators = async () => {
+async function getOperators() {
   try {
     const response = await axios.get(
       `http://api.511.org/transit/gtfsoperators?api_key=${process.env.API_KEY}`
@@ -26,7 +26,7 @@ const getOperators = async () => {
  * @param {string} agency=RG - Agency's code name
  * @returns {object} JSON object
  */
-const getVehiclePositions = async (agency = 'RG') => {
+async function getVehiclePositions(agency = 'RG') {
   try {
     const response = await axios.get(
       `http://api.511.org/Transit/VehiclePositions?api_key=${process.env.API_KEY}&agency=${agency}`, { responseType: 'arraybuffer' });
@@ -45,7 +45,7 @@ const getVehiclePositions = async (agency = 'RG') => {
  * @param {string} agency=RG - Agency's code name
  * @returns {object} JSON object
  */
-const getTripUpdates = async (agency = 'RG') => {
+async function getTripUpdates(agency = 'RG') {
   try {
     const response = await axios.get(
       `http://api.511.org/Transit/TripUpdates?api_key=${process.env.API_KEY}&agency=${agency}`
@@ -64,7 +64,7 @@ const getTripUpdates = async (agency = 'RG') => {
  * Example files: trips.txt, stops.txt, routes.txt, calendar.txt, etc.
  * @param {string} agency=RG - Agency's code name
  */
-const getGTFSDataFeed = async (agency = 'RG') => {
+async function getGTFSDataFeed(agency = 'RG') {
   try {
     const filename = `GTFSDataFeed_${agency}.zip`;
     const response = await axios({
@@ -88,7 +88,7 @@ const getGTFSDataFeed = async (agency = 'RG') => {
  * Get GTFS data, change text files to csv and save to directory. 
  * @param {string} agency - Agency's code name. Note: Default not all agencies due to file size.
  */
-const saveGTFSDataFeed = async (agency) => {
+async function saveGTFSDataFeed(agency) {
   const GTFSDateFeedPath = path.join(__dirname, 'GTFSDataFeeds', agency);
   await fs.promises.mkdir(GTFSDateFeedPath, { recursive: true })
   const file = `${__dirname}/GTFSDataFeed_${agency}.zip`;
