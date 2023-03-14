@@ -98,9 +98,15 @@ async function updatePositions(db) {
   });
 }
 
-function getPositions(db) {
+function getPositions(db, operator) {
   return new Promise((resolve, reject) => {
-    db.all('SELECT * FROM positions', (error, rows) => {
+    let query;
+    if (operator !== 'RG') {
+      query = `SELECT * FROM positions WHERE operator = '${operator}'`;
+    } else {
+      query = 'SELECT * FROM positions';
+    }
+    db.all(query, (error, rows) => {
       if (error) {
         return reject(error);
       } else {
@@ -110,4 +116,4 @@ function getPositions(db) {
   });
 }
 
-const db = connectDB();
+export { connectDB, getPositions, updatePositions }
