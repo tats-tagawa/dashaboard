@@ -3,7 +3,7 @@ import axios from 'axios';
 import cors from 'cors';
 import * as dotenv from 'dotenv';
 dotenv.config();
-import { connectDB, getPositions, updatePositions } from './utils/sqlite.js'
+import { connectDB, getPositions, updatePositions, createOperatorDataTable } from './utils/sqlite.js'
 import realtime from './routes/transit-realtime.js';
 import info from './routes/transit-info.js';
 

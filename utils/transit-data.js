@@ -97,7 +97,7 @@ async function saveGTFSDataFeed(operator) {
   const file = `${__dirname}/GTFSDataFeed_${operator}.zip`;
   fs.readFile(file, async (error, data) => {
     if (!error) {
-      const zip = JSZip();
+      const zip = JSZip()
       const contents = await zip.loadAsync(data)
       for (const filename of Object.keys(contents.files)) {
         const content = await zip.file(filename).async('nodebuffer');
@@ -124,21 +124,27 @@ async function getOperatorData(operator) {
       });
 
       response.data.pipe(writer);
-      writer.on('finish', async () => {
-        const buffer = Buffer.concat(chunks);
-        const zip = new JSZip();
-        const contents = await zip.loadAsync(buffer);
-        const files = [];
-        for (let filename of Object.keys(contents.files)) {
-          const data = await zip.file(filename).async('string');
-          filename = `${filename.split('.txt')[0]}`;
-          const delimiter = /\r\n/;
-          const parts = data.split(delimiter);
-          const header = parts.shift();
-          const rows = parts.join('\r\n');
-          files.push([filename, header, rows])
+      return new Promise((resolve, reject) => {
+        try {
+          writer.on('finish', async () => {
+            const buffer = Buffer.concat(chunks);
+            const zip = new JSZip();
+            const contents = await zip.loadAsync(buffer);
+            const files = [];
+            for (let filename of Object.keys(contents.files)) {
+              const data = await zip.file(filename).async('string');
+              filename = `${filename.split('.txt')[0]}`;
+              const delimiter = /\r\n/;
+              const parts = data.split(delimiter);
+              const header = parts.shift();
+              const rows = parts.join('\r\n');
+              files.push([filename, header, rows])
+            }
+            return resolve(files)
+          });
+        } catch (error) {
+          return reject(error)
         }
-        return files;
       });
     }
   } catch (error) {
@@ -146,4 +152,4 @@ async function getOperatorData(operator) {
   }
 }
 
-export { getOperators, getVehiclePositions, getTripUpdates, getGTFSDataFeed, saveGTFSDataFeed }
+export { getOperators, getVehiclePositions, getTripUpdates, getGTFSDataFeed, saveGTFSDataFeed, getOperatorData }
