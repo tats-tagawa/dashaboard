@@ -3,7 +3,10 @@ import axios from 'axios';
 import GtfsRealtimeBindings from 'gtfs-realtime-bindings';
 import { fileURLToPath } from 'url';
 import path from 'path';
+import * as dotenv from 'dotenv';
+dotenv.config();
 import JSZip from 'jszip';
+import { Writable } from 'stream';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -96,12 +99,51 @@ async function saveGTFSDataFeed(agency) {
     if (!error) {
       const zip = JSZip();
       const contents = await zip.loadAsync(data)
-      Object.keys(contents.files).forEach(async (filename) => {
+      for (const filename of Object.keys(contents.files)) {
         const content = await zip.file(filename).async('nodebuffer');
         fs.writeFileSync(`${GTFSDateFeedPath}/${filename.split('.txt')[0]}.csv`, content);
-      })
+      }
     };
   })
+}
+
+async function getOperatorData(operator) {
+  try {
+    const response = await axios({
+      method: 'get',
+      url: `http://api.511.org/Transit/datafeeds?api_key=${process.env.API_KEY}&operator_id=${operator}`,
+      responseType: 'stream'
+    });
+    if (response.status === 200) {
+      const chunks = [];
+      const writer = new Writable({
+        write(chunk, encoding, callback) {
+          chunks.push(chunk);
+          callback();
+        }
+      });
+
+      response.data.pipe(writer);
+      writer.on('finish', async () => {
+        const buffer = Buffer.concat(chunks);
+        const zip = new JSZip();
+        const contents = await zip.loadAsync(buffer);
+        const files = [];
+        for (let filename of Object.keys(contents.files)) {
+          const data = await zip.file(filename).async('string');
+          filename = `${filename.split('.txt')[0]}`;
+          const delimiter = /\r\n/;
+          const parts = data.split(delimiter);
+          const header = parts.shift();
+          const rows = parts.join('\r\n');
+          files.push([filename, header, rows])
+        }
+        return files;
+      });
+    }
+  } catch (error) {
+    console.error(error);
+  }
 }
 
 export { getOperators, getVehiclePositions, getTripUpdates, getGTFSDataFeed, saveGTFSDataFeed }
