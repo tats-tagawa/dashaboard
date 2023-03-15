@@ -14,14 +14,14 @@ async function updateOperatorsSupabase() {
     const response = await axios.get(
       `http://api.511.org/transit/gtfsoperators?api_key=${process.env.API_KEY}`)
     const operators = response.data;
-    operators.forEach(async operator => {
+    for (const operator of operators) {
       const { error } = await supabase
         .from('operators')
         .upsert({ id: operator.Id, operator_name: operator.Name });
       if (error) {
         console.log(error);
       }
-    })
+    }
   } catch (error) {
     console.error(error);
   }
@@ -60,7 +60,7 @@ async function updatePositionsSupabase() {
   await deletePositionsSupabase();
   const positions = await getVehiclePositions();
   const data = [];
-  positions.forEach(async (position) => {
+  for (const position of positions) {
     if (position.vehicle.trip) {
       const [operator, tripId] = position.vehicle.trip.tripId.split(':');
       data.push({
@@ -77,7 +77,7 @@ async function updatePositionsSupabase() {
         raw: position.vehicle,
       })
     }
-  })
+  }
   const { error } = await supabase
     .from('realtime_positions')
     .insert(data);
@@ -119,7 +119,7 @@ async function updateTripInfoSupabase() {
   await deleteTripsSupabase();
   const trips = await getTripUpdates();
   const data = [];
-  trips.forEach(async (trip) => {
+  for (const trip of trips) {
     const [operator, tripId] = trip.tripUpdate.trip.tripId.split(':');
     data.push({
       id: trip.tripUpdate.trip.tripId,
@@ -129,7 +129,7 @@ async function updateTripInfoSupabase() {
       trip_stops: trip.tripUpdate.stopTimeUpdate,
       raw: trip.tripUpdate,
     })
-  })
+  }
   const { error } = await supabase
     .from('trip_updates')
     .insert(data);
