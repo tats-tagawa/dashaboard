@@ -1,6 +1,11 @@
-import axios from 'axios';
-import { createClient } from '@supabase/supabase-js';
-import { getVehiclePositions, getTripUpdates, getGTFSDataFeed, saveGTFSDataFeed } from './transit-data.js'
+import axios from "axios";
+import { createClient } from "@supabase/supabase-js";
+import {
+  getVehiclePositions,
+  getTripUpdates,
+  getGTFSDataFeed,
+  saveGTFSDataFeed,
+} from "./transit-data.js";
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_KEY;
@@ -12,11 +17,12 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 async function updateOperatorsSupabase() {
   try {
     const response = await axios.get(
-      `http://api.511.org/transit/gtfsoperators?api_key=${process.env.API_KEY}`)
+      `http://api.511.org/transit/gtfsoperators?api_key=${process.env.API_KEY}`
+    );
     const operators = response.data;
     for (const operator of operators) {
       const { error } = await supabase
-        .from('operators')
+        .from("operators")
         .upsert({ id: operator.Id, operator_name: operator.Name });
       if (error) {
         console.log(error);
@@ -32,9 +38,7 @@ async function updateOperatorsSupabase() {
  * @returns {object} JSON object
  */
 async function getOperatorsSupabase() {
-  const { data, error } = await supabase
-    .from('operators')
-    .select();
+  const { data, error } = await supabase.from("operators").select();
   return data;
 }
 
@@ -44,10 +48,10 @@ async function getOperatorsSupabase() {
  */
 async function deletePositionsSupabase() {
   const { error } = await supabase
-    .from('realtime_positions')
+    .from("realtime_positions")
     .delete()
-    .neq('id', '');
-  console.log('Delete Positions Completed')
+    .neq("id", "");
+  console.log("Delete Positions Completed");
   if (error) {
     console.error(error);
   }
@@ -62,7 +66,7 @@ async function updatePositionsSupabase() {
   const data = [];
   for (const position of positions) {
     if (position.vehicle.trip) {
-      const [operator, tripId] = position.vehicle.trip.tripId.split(':');
+      const [operator, tripId] = position.vehicle.trip.tripId.split(":");
       data.push({
         id: `${position.vehicle.trip.tripId}:${position.vehicle.vehicle.id}`,
         operator: operator,
@@ -75,13 +79,11 @@ async function updatePositionsSupabase() {
         bearing: position.vehicle.position.bearing,
         speed: position.vehicle.position.speed,
         raw: position.vehicle,
-      })
+      });
     }
   }
-  const { error } = await supabase
-    .from('realtime_positions')
-    .insert(data);
-  console.log('Insert Positions Completed')
+  const { error } = await supabase.from("realtime_positions").insert(data);
+  console.log("Insert Positions Completed");
   if (error) {
     console.error(error);
   }
@@ -92,9 +94,7 @@ async function updatePositionsSupabase() {
  * @returns {object} JSON object
  */
 async function getPositionsSupabase() {
-  const { data, error } = await supabase
-    .from('realtime_positions')
-    .select()
+  const { data, error } = await supabase.from("realtime_positions").select();
   return data;
 }
 
@@ -102,13 +102,10 @@ async function getPositionsSupabase() {
  * Delete all trip information in Supabase
  */
 async function deleteTripsSupabase() {
-  const { error } = await supabase
-    .from('trip_updates')
-    .delete()
-    .neq('id', '');
-  console.log('Delete Trips Completed')
+  const { error } = await supabase.from("trip_updates").delete().neq("id", "");
+  console.log("Delete Trips Completed");
   if (error) {
-    console.error(error)
+    console.error(error);
   }
 }
 
@@ -120,7 +117,7 @@ async function updateTripInfoSupabase() {
   const trips = await getTripUpdates();
   const data = [];
   for (const trip of trips) {
-    const [operator, tripId] = trip.tripUpdate.trip.tripId.split(':');
+    const [operator, tripId] = trip.tripUpdate.trip.tripId.split(":");
     data.push({
       id: trip.tripUpdate.trip.tripId,
       operator: operator,
@@ -128,15 +125,21 @@ async function updateTripInfoSupabase() {
       route_id: trip.tripUpdate.trip.routeId,
       trip_stops: trip.tripUpdate.stopTimeUpdate,
       raw: trip.tripUpdate,
-    })
+    });
   }
-  const { error } = await supabase
-    .from('trip_updates')
-    .insert(data);
-  console.log('Insert Trips Completed');
+  const { error } = await supabase.from("trip_updates").insert(data);
+  console.log("Insert Trips Completed");
   if (error) {
     console.error(error);
   }
 }
 
-export { updateOperatorsSupabase, getOperatorsSupabase, updatePositionsSupabase, getPositionsSupabase, deletePositionsSupabase, deleteTripsSupabase, updateTripInfoSupabase }
+export {
+  updateOperatorsSupabase,
+  getOperatorsSupabase,
+  updatePositionsSupabase,
+  getPositionsSupabase,
+  deletePositionsSupabase,
+  deleteTripsSupabase,
+  updateTripInfoSupabase,
+};

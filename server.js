@@ -1,19 +1,24 @@
-import express from 'express';
-import axios from 'axios';
-import cors from 'cors';
-import * as dotenv from 'dotenv';
+import express from "express";
+import axios from "axios";
+import cors from "cors";
+import * as dotenv from "dotenv";
 dotenv.config();
-import { connectDB, getPositions, updatePositions, createOperatorDataTable } from './utils/sqlite.js'
-import realtime from './routes/transit-realtime.js';
-import info from './routes/transit-info.js';
+import {
+  connectDB,
+  getPositions,
+  updatePositions,
+  createOperatorDataTable,
+} from "./utils/sqlite.js";
+import realtime from "./routes/transit-realtime.js";
+import info from "./routes/transit-info.js";
 
 const app = express();
 const port = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
-app.use('/realtime', realtime);
-app.use('/info', info);
+app.use("/realtime", realtime);
+app.use("/info", info);
 
 app.listen(port, () => {
   console.log(`Dashaboard listening on port ${port}`);
@@ -21,8 +26,8 @@ app.listen(port, () => {
 
 const db = connectDB();
 
-app.get('/positions/:operator', async (req, res) => {
+app.get("/positions/:operator", async (req, res) => {
   await updatePositions(db);
   const positions = await getPositions(db, req.params.operator);
-  res.send(positions)
-})
+  res.send(positions);
+});

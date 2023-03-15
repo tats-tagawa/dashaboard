@@ -1,13 +1,15 @@
-import axios from 'axios';
-import GtfsRealtimeBindings from 'gtfs-realtime-bindings';
-import express from 'express';
+import axios from "axios";
+import GtfsRealtimeBindings from "gtfs-realtime-bindings";
+import express from "express";
 
 const realtime = express.Router();
 
-realtime.get('/position', (req, res) => {
-  axios.get(
-    `http://api.511.org/Transit/VehiclePositions?api_key=${process.env.API_KEY}&operator=${req.query.operator}`,
-    { responseType: 'arraybuffer' })
+realtime.get("/position", (req, res) => {
+  axios
+    .get(
+      `http://api.511.org/Transit/VehiclePositions?api_key=${process.env.API_KEY}&operator=${req.query.operator}`,
+      { responseType: "arraybuffer" }
+    )
     .then((response) => {
       const feed = GtfsRealtimeBindings.transit_realtime.FeedMessage.decode(
         new Uint8Array(response.data)
@@ -15,14 +17,16 @@ realtime.get('/position', (req, res) => {
       res.json(feed.entity);
     })
     .catch((error) => {
-      console.log(error)
-    })
-})
+      console.log(error);
+    });
+});
 
-realtime.get('/trip-updates/', (req, res) => {
-  axios.get(
-    `http://api.511.org/Transit/TripUpdates?api_key=${process.env.API_KEY}&operator=${req.query.operator}`,
-    { responseType: 'arraybuffer' })
+realtime.get("/trip-updates/", (req, res) => {
+  axios
+    .get(
+      `http://api.511.org/Transit/TripUpdates?api_key=${process.env.API_KEY}&operator=${req.query.operator}`,
+      { responseType: "arraybuffer" }
+    )
     .then((response) => {
       const feed = GtfsRealtimeBindings.transit_realtime.FeedMessage.decode(
         new Uint8Array(response.data)
@@ -30,8 +34,8 @@ realtime.get('/trip-updates/', (req, res) => {
       res.json(feed.entity);
     })
     .catch((error) => {
-      console.log(error)
-    })
-})
+      console.log(error);
+    });
+});
 
 export default realtime;

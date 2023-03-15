@@ -1,21 +1,25 @@
-import sqlite3 from 'sqlite3';
-import * as dotenv from 'dotenv';
+import sqlite3 from "sqlite3";
+import * as dotenv from "dotenv";
 dotenv.config();
-import { getOperators, getVehiclePositions } from './transit-data.js'
+import {
+  getOperators,
+  getVehiclePositions,
+  getOperatorData,
+} from "./transit-data.js";
 
 function connectDB() {
-  const db = new sqlite3.Database('dashaboard.db', (error) => {
+  const db = new sqlite3.Database("dashaboard.db", (error) => {
     if (error) {
       console.error(error.message);
     }
   });
   console.log("Connected to dashaboard.db");
-  return db
+  return db;
 }
 
 function createOperatorsTable(db) {
   db.run(`
-  CREATE TABLE operators
+  CREATE TABLE IF NOT EXISTS operators
   (
     id TEXT PRIMARY KEY,
     name TEXT
@@ -27,24 +31,28 @@ async function updateOperators(db) {
   const operators = await getOperators();
   for (const operator of operators) {
     console.log(operator);
-    const operatorData = [operator.Id, operator.Name]
-    db.run('INSERT INTO operators(id, name) VALUES (?, ?)', operatorData, (error) => {
-      if (error) {
-        console.error(error.message);
-      } else {
-        console.log(`Inserted ${operator.Name} (${operator.Id})`);
+    const operatorData = [operator.Id, operator.Name];
+    db.run(
+      "INSERT INTO operators(id, name) VALUES (?, ?)",
+      operatorData,
+      (error) => {
+        if (error) {
+          console.error(error.message);
+        } else {
+          console.log(`Inserted ${operator.Name} (${operator.Id})`);
+        }
       }
-    });
-  };
+    );
+  }
 }
 
 function deleteOperators(db) {
-  db.run('DELETE FROM operators');
+  db.run("DELETE FROM operators");
 }
 
 async function createPositionsTable(db) {
   db.run(`
-  CREATE TABLE positions
+  CREATE TABLE IF NOT EXISTS positions
   (
     id TEXT PRIMARY KEY,
     operator TEXT,
@@ -57,19 +65,19 @@ async function createPositionsTable(db) {
     bearing REAL,
     speed REAL
   )
-  `)
+  `);
 }
 function deletePositions(db) {
-  db.run('DELETE FROM positions')
+  db.run("DELETE FROM positions");
 }
 
 async function updatePositions(db) {
-  deletePositions(db)
+  deletePositions(db);
   const positions = await getVehiclePositions();
   for (const position of positions) {
     if (position.vehicle.trip) {
-      const [operator, tripId] = position.vehicle.trip.tripId.split(':');
-      const [_, routeId] = position.vehicle.trip.routeId.split(':');
+      const [operator, tripId] = position.vehicle.trip.tripId.split(":");
+      const [_, routeId] = position.vehicle.trip.routeId.split(":");
       const data = [
         `${position.vehicle.trip.tripId}:${position.vehicle.vehicle.id}`,
         operator,
@@ -82,29 +90,33 @@ async function updatePositions(db) {
         position.vehicle.position.bearing,
         position.vehicle.position.speed,
       ];
-      db.run(`
+      db.run(
+        `
         INSERT INTO positions
         (id, operator, trip_id, vehicle_id, route_id, direction_id, latitude, longitude, bearing, speed)
         VALUES
         (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `, data, (error) => {
-        if (error) {
-          console.error(error);
-        } else {
-          console.log(`Inserted ${operator} - ${tripId}`);
+      `,
+        data,
+        (error) => {
+          if (error) {
+            console.error(error);
+          } else {
+            console.log(`Inserted ${operator} - ${tripId}`);
+          }
         }
-      });
+      );
     }
-  };
+  }
 }
 
 function getPositions(db, operator) {
   return new Promise((resolve, reject) => {
     let query;
-    if (operator !== 'RG') {
+    if (operator !== "RG") {
       query = `SELECT * FROM positions WHERE operator = '${operator}'`;
     } else {
-      query = 'SELECT * FROM positions';
+      query = "SELECT * FROM positions";
     }
     db.all(query, (error, rows) => {
       if (error) {
@@ -112,8 +124,13 @@ function getPositions(db, operator) {
       } else {
         return resolve(rows);
       }
-    })
+    });
   });
 }
 
-export { connectDB, getPositions, updatePositions }
+async function createOperatorDataTable(db, operator) {
+  const operatorData = await getOperatorData(operator);
+  console.log(operatorData);
+}
+
+export { connectDB, getPositions, updatePositions, createOperatorDataTable };
