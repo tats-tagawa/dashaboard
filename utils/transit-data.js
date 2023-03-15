@@ -26,13 +26,13 @@ async function getOperators() {
 /**
  * Get realtime vehicle location data
  *  
- * @param {string} agency=RG - Agency's code name
+ * @param {string} operator=RG - operator's code name
  * @returns {object} JSON object
  */
-async function getVehiclePositions(agency = 'RG') {
+async function getVehiclePositions(operator = 'RG') {
   try {
     const response = await axios.get(
-      `http://api.511.org/Transit/VehiclePositions?api_key=${process.env.API_KEY}&agency=${agency}`, { responseType: 'arraybuffer' });
+      `http://api.511.org/Transit/VehiclePositions?api_key=${process.env.API_KEY}&operator=${operator}`, { responseType: 'arraybuffer' });
     const feed = GtfsRealtimeBindings.transit_realtime.FeedMessage.decode(
       new Uint8Array(response.data)
     );
@@ -45,13 +45,13 @@ async function getVehiclePositions(agency = 'RG') {
 
 /**
  * Get ETA/names of upcoming stops for vehicles
- * @param {string} agency=RG - Agency's code name
+ * @param {string} operator=RG - operator's code name
  * @returns {object} JSON object
  */
-async function getTripUpdates(agency = 'RG') {
+async function getTripUpdates(operator = 'RG') {
   try {
     const response = await axios.get(
-      `http://api.511.org/Transit/TripUpdates?api_key=${process.env.API_KEY}&agency=${agency}`
+      `http://api.511.org/Transit/TripUpdates?api_key=${process.env.API_KEY}&operator=${operator}`
       , { responseType: 'arraybuffer' });
     const feed = GtfsRealtimeBindings.transit_realtime.FeedMessage.decode(
       new Uint8Array(response.data)
@@ -65,14 +65,14 @@ async function getTripUpdates(agency = 'RG') {
 /**
  * Save GTFS dataset as zip
  * Example files: trips.txt, stops.txt, routes.txt, calendar.txt, etc.
- * @param {string} agency=RG - Agency's code name
+ * @param {string} operator=RG - operator's code name
  */
-async function getGTFSDataFeed(agency = 'RG') {
+async function getGTFSDataFeed(operator = 'RG') {
   try {
-    const filename = `GTFSDataFeed_${agency}.zip`;
+    const filename = `GTFSDataFeed_${operator}.zip`;
     const response = await axios({
       method: 'get',
-      url: `http://api.511.org/Transit/datafeeds?api_key=${process.env.API_KEY}&operator_id=${agency}`,
+      url: `http://api.511.org/Transit/datafeeds?api_key=${process.env.API_KEY}&operator_id=${operator}`,
       responseType: 'stream',
     })
     if (response.status === 200) {
@@ -89,12 +89,12 @@ async function getGTFSDataFeed(agency = 'RG') {
 
 /**
  * Get GTFS data, change text files to csv and save to directory. 
- * @param {string} agency - Agency's code name. Note: Default not all agencies due to file size.
+ * @param {string} operator - operator's code name. Note: Default not all agencies due to file size.
  */
-async function saveGTFSDataFeed(agency) {
-  const GTFSDateFeedPath = path.join(__dirname, 'GTFSDataFeeds', agency);
+async function saveGTFSDataFeed(operator) {
+  const GTFSDateFeedPath = path.join(__dirname, 'GTFSDataFeeds', operator);
   await fs.promises.mkdir(GTFSDateFeedPath, { recursive: true })
-  const file = `${__dirname}/GTFSDataFeed_${agency}.zip`;
+  const file = `${__dirname}/GTFSDataFeed_${operator}.zip`;
   fs.readFile(file, async (error, data) => {
     if (!error) {
       const zip = JSZip();

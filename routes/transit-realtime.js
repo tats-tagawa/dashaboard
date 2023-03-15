@@ -6,7 +6,7 @@ const realtime = express.Router();
 
 realtime.get('/position', (req, res) => {
   axios.get(
-    `http://api.511.org/Transit/VehiclePositions?api_key=${process.env.API_KEY}&agency=${req.query.agency}`,
+    `http://api.511.org/Transit/VehiclePositions?api_key=${process.env.API_KEY}&operator=${req.query.operator}`,
     { responseType: 'arraybuffer' })
     .then((response) => {
       const feed = GtfsRealtimeBindings.transit_realtime.FeedMessage.decode(
@@ -21,7 +21,7 @@ realtime.get('/position', (req, res) => {
 
 realtime.get('/trip-updates/', (req, res) => {
   axios.get(
-    `http://api.511.org/Transit/TripUpdates?api_key=${process.env.API_KEY}&agency=${req.query.agency}`,
+    `http://api.511.org/Transit/TripUpdates?api_key=${process.env.API_KEY}&operator=${req.query.operator}`,
     { responseType: 'arraybuffer' })
     .then((response) => {
       const feed = GtfsRealtimeBindings.transit_realtime.FeedMessage.decode(
