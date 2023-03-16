@@ -130,7 +130,6 @@ function getPositions(db, operator) {
 
 async function createOperatorDataTable(db, operator) {
   const operatorData = await getOperatorData(operator);
-  
 }
 
 export { connectDB, getPositions, updatePositions, createOperatorDataTable };

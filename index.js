@@ -51,6 +51,11 @@ map.on("mouseenter", ["CT"], (e) => {
     .addTo(map);
 });
 
+map.on("mouseleave", ["CT"], () => {
+  map.getCanvas().style.cursor = "";
+  popup.remove();
+});
+
 async function updatePositions(operator = "RG") {
   const positions = await getPositions(operator);
   const points = {
