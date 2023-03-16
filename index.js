@@ -10,7 +10,7 @@ const map = new mapboxgl.Map({
 });
 
 map.on("load", async () => {
-  map.addSource("caltrain", {
+  map.addSource("CT", {
     type: "geojson",
     data: {
       type: "FeatureCollection",
@@ -19,9 +19,9 @@ map.on("load", async () => {
   });
 
   map.addLayer({
-    id: "caltrain",
+    id: "CT",
     type: "circle",
-    source: "caltrain",
+    source: "CT",
     paint: {
       "circle-color": "#E31837",
       "circle-radius": 6,
@@ -36,8 +36,7 @@ const popup = new mapboxgl.Popup({
   closeOnClick: false,
 });
 
-map.on("mouseenter", ["caltrain"], (e) => {
-  console.log(e);
+map.on("mouseenter", ["CT"], (e) => {
   map.getCanvas().style.cursor = "pointer";
   const properties = e.features[0].properties;
   const operator = properties.operator;
@@ -52,13 +51,25 @@ map.on("mouseenter", ["caltrain"], (e) => {
     .addTo(map);
 });
 
+async function updatePositions(operator = "RG") {
+  const positions = await getPositions(operator);
+  const points = {
+    type: "FeatureCollection",
+    features: positions,
+  };
+  map.getSource("CT").setData(points);
+}
+
+setInterval(() => {
+  updatePositions("CT");
+}, 30000);
+
 async function getPositions(operator = "RG") {
   const response = await fetch(`http://localhost:3000/positions/${operator}`);
   const positions = await response.json();
   const positionsGeoJSON = [];
   for (const position of positions) {
     const coordinates = [position.longitude, position.latitude];
-    console.log(position);
     positionsGeoJSON.push({
       type: "Feature",
       properties: {
