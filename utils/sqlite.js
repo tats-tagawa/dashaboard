@@ -30,7 +30,6 @@ function createOperatorsTable(db) {
 async function updateOperators(db) {
   const operators = await getOperators();
   for (const operator of operators) {
-    console.log(operator);
     const operatorData = [operator.Id, operator.Name];
     db.run(
       "INSERT INTO operators(id, name) VALUES (?, ?)",
@@ -74,6 +73,7 @@ function deletePositions(db) {
 async function updatePositions(db) {
   deletePositions(db);
   const positions = await getVehiclePositions();
+  console.log(positions);
   for (const position of positions) {
     if (position.vehicle.trip) {
       const [operator, tripId] = position.vehicle.trip.tripId.split(":");
@@ -130,7 +130,7 @@ function getPositions(db, operator) {
 
 async function createOperatorDataTable(db, operator) {
   const operatorData = await getOperatorData(operator);
-  console.log(operatorData);
+  
 }
 
 export { connectDB, getPositions, updatePositions, createOperatorDataTable };

@@ -18,7 +18,6 @@ async function getOperators() {
     );
     return response.data;
   } catch (error) {
-    console.log("getOperators");
     console.error(error);
   }
 }
@@ -32,7 +31,7 @@ async function getOperators() {
 async function getVehiclePositions(operator = "RG") {
   try {
     const response = await axios.get(
-      `http://api.511.org/Transit/VehiclePositions?api_key=${process.env.API_KEY}&operator=${operator}`,
+      `http://api.511.org/Transit/VehiclePositions?api_key=${process.env.API_KEY}&agency=${operator}`,
       { responseType: "arraybuffer" }
     );
     const feed = GtfsRealtimeBindings.transit_realtime.FeedMessage.decode(
@@ -40,7 +39,6 @@ async function getVehiclePositions(operator = "RG") {
     );
     return feed.entity;
   } catch (error) {
-    console.log("vehiclePositions");
     console.error(error);
   }
 }
@@ -53,7 +51,7 @@ async function getVehiclePositions(operator = "RG") {
 async function getTripUpdates(operator = "RG") {
   try {
     const response = await axios.get(
-      `http://api.511.org/Transit/TripUpdates?api_key=${process.env.API_KEY}&operator=${operator}`,
+      `http://api.511.org/Transit/TripUpdates?api_key=${process.env.API_KEY}&agency=${operator}`,
       { responseType: "arraybuffer" }
     );
     const feed = GtfsRealtimeBindings.transit_realtime.FeedMessage.decode(
