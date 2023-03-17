@@ -10,25 +10,7 @@ const map = new mapboxgl.Map({
 });
 
 map.on("load", async () => {
-  map.addSource("CT", {
-    type: "geojson",
-    data: {
-      type: "FeatureCollection",
-      features: await getPositions("CT"),
-    },
-  });
-
-  map.addLayer({
-    id: "CT",
-    type: "circle",
-    source: "CT",
-    paint: {
-      "circle-color": "#E31837",
-      "circle-radius": 6,
-      "circle-stroke-width": 2,
-      "circle-stroke-color": "#FFFFFF",
-    },
-  });
+  createPositionMarkerSource(map, "CT", "#E31837")
 });
 
 const popup = new mapboxgl.Popup({
@@ -63,6 +45,28 @@ async function updatePositions(operator = "RG") {
     features: positions,
   };
   map.getSource("CT").setData(points);
+}
+
+async function createPositionMarkerSource(map, operator, color) {
+  map.addSource(operator, {
+    type: "geojson",
+    data: {
+      type: "FeatureCollection",
+      features: await getPositions(operator),
+    },
+  });
+
+  map.addLayer({
+    id: operator,
+    type: "circle",
+    source: operator,
+    paint: {
+      "circle-color": color,
+      "circle-radius": 6,
+      "circle-stroke-width": 2,
+      "circle-stroke-color": "#FFFFFF",
+    },
+  });
 }
 
 // setInterval(() => {
