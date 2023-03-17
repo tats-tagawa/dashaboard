@@ -7,7 +7,6 @@ import {
   connectDB,
   getPositions,
   updatePositions,
-  createOperatorDataTable,
 } from "./utils/sqlite.js";
 import realtime from "./routes/transit-realtime.js";
 import info from "./routes/transit-info.js";

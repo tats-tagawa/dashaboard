@@ -38,7 +38,6 @@ async function updateOperators(db) {
         if (error) {
           console.error(error.message);
         } else {
-          console.log(`Inserted ${operator.Name} (${operator.Id})`);
         }
       }
     );
@@ -63,8 +62,7 @@ async function createPositionsTable(db) {
     longitude REAL,
     bearing REAL,
     speed REAL
-  )
-  `);
+  )`);
 }
 function deletePositions(db) {
   db.run("DELETE FROM positions");
@@ -73,7 +71,6 @@ function deletePositions(db) {
 async function updatePositions(db) {
   deletePositions(db);
   const positions = await getVehiclePositions();
-  console.log(positions);
   for (const position of positions) {
     if (position.vehicle.trip) {
       const [operator, tripId] = position.vehicle.trip.tripId.split(":");
@@ -93,16 +90,14 @@ async function updatePositions(db) {
       db.run(
         `
         INSERT INTO positions
-        (id, operator, trip_id, vehicle_id, route_id, direction_id, latitude, longitude, bearing, speed)
+          (id, operator, trip_id, vehicle_id, route_id, direction_id, latitude, longitude, bearing, speed)
         VALUES
-        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `,
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         data,
         (error) => {
           if (error) {
             console.error(error);
           } else {
-            console.log(`Inserted ${operator} - ${tripId}`);
           }
         }
       );
@@ -128,8 +123,49 @@ function getPositions(db, operator) {
   });
 }
 
-async function createOperatorDataTable(db, operator) {
-  const operatorData = await getOperatorData(operator);
+async function createShapesTable(db) {
+  db.run(`
+    CREATE TABLE IF NOT EXISTS shapes
+      (
+        operator TEXT,
+        shape_id TEXT,
+        shape_pt_lon REAL,
+        shape_pt_lat REAL,
+        shape_pt_sequence INT,
+        shape_dist_traveled REAL
+      )`);
 }
 
-export { connectDB, getPositions, updatePositions, createOperatorDataTable };
+async function updateShapesTable(db, operator) {
+  console.log("getting data....");
+  const operatorData = await getOperatorData(operator);
+  for (const data of operatorData) {
+    if (data[0] === "shapes") {
+      let rows = data[2].split("\r\n");
+      rows.forEach((row, index) => {
+        rows[index] = [operator].concat(row.split(","));
+        console.log(rows[index]);
+          db.run(
+            `
+        INSERT INTO shapes
+          (operator, shape_id, shape_pt_lon, shape_pt_lat, shape_pt_sequence, shape_dist_traveled)
+        VALUES
+          (?, ?, ?, ?, ?, ?)
+        `,
+            rows[index],
+            (error) => {
+              if (error) {
+                console.error(error);
+              } else {
+              }
+            }
+          );
+      });
+      console.log('Inserting shapes complete')
+    }
+  }
+}
+// let db = connectDB();
+// createShapesTable(db);
+// updateShapesTable(db, "CT");
+export { connectDB, getPositions, updatePositions };

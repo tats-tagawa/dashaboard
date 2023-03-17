@@ -65,9 +65,9 @@ async function updatePositions(operator = "RG") {
   map.getSource("CT").setData(points);
 }
 
-setInterval(() => {
-  updatePositions("CT");
-}, 30000);
+// setInterval(() => {
+//   updatePositions("CT");
+// }, 30000);
 
 async function getPositions(operator = "RG") {
   const response = await fetch(`http://localhost:3000/positions/${operator}`);
