@@ -42,6 +42,7 @@ async function updateOperators(db) {
       }
     );
   }
+  console.log("Updated operators")
 }
 
 function deleteOperators(db) {
@@ -64,6 +65,7 @@ async function createPositionsTable(db) {
     speed REAL
   )`);
 }
+
 function deletePositions(db) {
   db.run("DELETE FROM positions");
 }
@@ -103,6 +105,7 @@ async function updatePositions(db) {
       );
     }
   }
+  console.log("Updated positions")
 }
 
 function getPositions(db, operator) {
@@ -136,6 +139,10 @@ async function createShapesTable(db) {
       )`);
 }
 
+function deleteShapes(db) {
+  db.run("DELETE FROM shapes");
+}
+
 async function updateShapesTable(db, operator) {
   console.log("getting data....");
   const operatorData = await getOperatorData(operator);
@@ -161,11 +168,9 @@ async function updateShapesTable(db, operator) {
             }
           );
       });
-      console.log('Inserting shapes complete')
+      console.log('Updated shapes')
     }
   }
 }
-// let db = connectDB();
-// createShapesTable(db);
-// updateShapesTable(db, "CT");
+
 export { connectDB, getPositions, updatePositions };
