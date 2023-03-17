@@ -42,7 +42,7 @@ async function updateOperators(db) {
       }
     );
   }
-  console.log("Updated operators")
+  console.log("Updated operators");
 }
 
 function deleteOperators(db) {
@@ -51,19 +51,19 @@ function deleteOperators(db) {
 
 async function createPositionsTable(db) {
   db.run(`
-  CREATE TABLE IF NOT EXISTS positions
-  (
-    id TEXT PRIMARY KEY,
-    operator TEXT,
-    trip_id TEXT,
-    vehicle_id TEXT,
-    route_id TEXT,
-    direction_id INT,
-    latitude REAL,
-    longitude REAL,
-    bearing REAL,
-    speed REAL
-  )`);
+    CREATE TABLE IF NOT EXISTS positions
+    (
+      id TEXT PRIMARY KEY,
+      operator TEXT,
+      trip_id TEXT,
+      vehicle_id TEXT,
+      route_id TEXT,
+      direction_id INT,
+      latitude REAL,
+      longitude REAL,
+      bearing REAL,
+      speed REAL
+    )`);
 }
 
 function deletePositions(db) {
@@ -89,23 +89,21 @@ async function updatePositions(db) {
         position.vehicle.position.bearing,
         position.vehicle.position.speed,
       ];
-      db.run(
-        `
+      const query = `
         INSERT INTO positions
           (id, operator, trip_id, vehicle_id, route_id, direction_id, latitude, longitude, bearing, speed)
         VALUES
-        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        data,
-        (error) => {
-          if (error) {
-            console.error(error);
-          } else {
-          }
+          (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `;
+      db.run(query, data, (error) => {
+        if (error) {
+          console.error(error);
+        } else {
         }
-      );
+      });
     }
   }
-  console.log("Updated positions")
+  console.log("Updated positions");
 }
 
 function getPositions(db, operator) {
@@ -151,24 +149,20 @@ async function updateShapesTable(db, operator) {
       let rows = data[2].split("\r\n");
       rows.forEach((row, index) => {
         rows[index] = [operator].concat(row.split(","));
-        console.log(rows[index]);
-          db.run(
-            `
-        INSERT INTO shapes
-          (operator, shape_id, shape_pt_lon, shape_pt_lat, shape_pt_sequence, shape_dist_traveled)
-        VALUES
-          (?, ?, ?, ?, ?, ?)
-        `,
-            rows[index],
-            (error) => {
-              if (error) {
-                console.error(error);
-              } else {
-              }
-            }
-          );
+        const query = `
+          INSERT INTO shapes
+            (operator, shape_id, shape_pt_lon, shape_pt_lat, shape_pt_sequence, shape_dist_traveled)
+          VALUES
+            (?, ?, ?, ?, ?, ?)
+          `;
+        db.run(query, rows[index], (error) => {
+          if (error) {
+            console.error(error);
+          } else {
+          }
+        });
       });
-      console.log('Updated shapes')
+      console.log("Updated shapes");
     }
   }
 }
