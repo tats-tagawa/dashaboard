@@ -162,9 +162,50 @@ async function updateShapesTable(db, operator) {
           }
         });
       });
-      console.log("Updated shapes");
     }
   }
 }
+
+async function getShapeIds(db, operator) {
+  return new Promise((resolve, reject) => {
+    const query = `SELECT DISTINCT shape_id FROM shapes WHERE operator='${operator}'`;
+    db.all(query, (error, rows) => {
+      if (error) {
+        return reject(error);
+      }
+      rows = rows.map((obj) => {
+        return obj.shape_id;
+      });
+      return resolve(rows);
+    });
+  });
+}
+
+async function getShapeCoordinates(db, shapeId) {
+  return new Promise((resolve, reject) => {
+    const coordinate_query = `SELECT shape_pt_lon, shape_pt_lat FROM shapes WHERE shape_id='${shapeId}' ORDER BY shape_pt_sequence`;
+    db.all(coordinate_query, (error, coordinates) => {
+      if (error) {
+        return reject(error);
+      }
+      const coordinatesArray = coordinates.map((obj) => {
+        return [obj.shape_pt_lon, obj.shape_pt_lat];
+      });
+      return resolve(coordinatesArray)
+    });
+  });
+}
+
+async function getAllShapeCoordinates(db, operator) {
+  const shapeCoordinates = {}
+  const shapeIds = await getShapeIds(db, operator);
+  for (const shapeId of shapeIds) {
+    shapeCoordinates[shapeId] = await getShapeCoordinates(db, shapeId)
+  }
+  return shapeCoordinates;
+}
+
+// const db = connectDB();
+// console.log(await getAllShapeCoordinates(db, "CT"))
 
 export { connectDB, getPositions, updatePositions };
