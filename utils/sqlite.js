@@ -17,6 +17,8 @@ function connectDB() {
   return db;
 }
 
+const db = connectDB();
+
 function createOperatorsTable(db) {
   db.run(`
   CREATE TABLE IF NOT EXISTS operators
@@ -199,7 +201,21 @@ async function updateOperatorDataTable(db, operator) {
 // const db = connectDB();
 // createTripsTable(db);
 // updateOperatorDataTable(db, "CT");
+async function getTripShapeId(db, tripId) {
+  return new Promise((resolve, reject) => {
+    const query = `
+    SELECT shape_id FROM trips WHERE trip_id='${tripId}'
+  `;
+    db.get(query, (error, row) => {
+      if (error) {
+        return reject(error);
+      }
+      return resolve(row);
+    });
+  });
+}
 
+// console.log(await getShapeCoordinates(db, await getTripShape(db, '122')));
 
 async function getShapeIds(db, operator) {
   return new Promise((resolve, reject) => {
@@ -249,4 +265,4 @@ async function getAllShapeCoordinates(db, operator) {
 //   console.log(data)
 // })
 
-export { connectDB, getPositions, updatePositions };
+export { connectDB, getPositions, updatePositions, getTripShapeId, getShapeCoordinates };

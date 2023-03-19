@@ -7,6 +7,8 @@ import {
   connectDB,
   getPositions,
   updatePositions,
+  getTripShapeId,
+  getShapeCoordinates,
 } from "./utils/sqlite.js";
 import realtime from "./routes/transit-realtime.js";
 import info from "./routes/transit-info.js";
@@ -25,8 +27,14 @@ app.listen(port, () => {
 
 const db = connectDB();
 
-app.get("/positions/:operator", async (req, res) => {
+app.get("/positions", async (req, res) => {
   await updatePositions(db);
-  const positions = await getPositions(db, req.params.operator);
+  const positions = await getPositions(db, req.query.operator);
   res.send(positions);
 });
+
+app.get("/shapes", async (req, res) => {
+  const data = await getTripShapeId(db, req.query.tripId);
+  const tripCoordinates = await getShapeCoordinates(db, data.shape_id)
+  res.send(tripCoordinates);
+})

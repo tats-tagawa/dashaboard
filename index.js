@@ -10,7 +10,7 @@ const map = new mapboxgl.Map({
 });
 
 map.on("load", async () => {
-  createPositionMarkerSource(map, "CT", "#E31837")
+  createPositionMarkerSource(map, "CT", "#E31837");
 });
 
 const popup = new mapboxgl.Popup({
@@ -74,7 +74,7 @@ async function createPositionMarkerSource(map, operator, color) {
 // }, 30000);
 
 async function getPositions(operator = "RG") {
-  const response = await fetch(`http://localhost:3000/positions/${operator}`);
+  const response = await fetch(`http://localhost:3000/positions?operator=${operator}`);
   const positions = await response.json();
   const positionsGeoJSON = [];
   for (const position of positions) {
@@ -96,4 +96,9 @@ async function getPositions(operator = "RG") {
     });
   }
   return positionsGeoJSON;
+}
+
+async function getShapeCoordinates(tripId) {
+  const response = await fetch(`http://localhost:3000/shapes?tripId=${tripId}`);
+  console.log(await response.json());
 }
