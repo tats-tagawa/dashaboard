@@ -28,7 +28,7 @@ function createOperatorsTable(db) {
 }
 
 async function updateOperators(db) {
-  deleteTableData(db, "operators")
+  deleteTableData(db, "operators");
   const operators = await getOperators();
   for (const operator of operators) {
     const operatorData = [operator.Id, operator.Name];
@@ -68,7 +68,7 @@ async function createPositionsTable(db) {
 }
 
 async function updatePositions(db) {
-  deleteTableData(db, 'positions');
+  deleteTableData(db, "positions");
   const positions = await getVehiclePositions();
   for (const position of positions) {
     if (position.vehicle.trip) {
@@ -125,6 +125,7 @@ async function createTripsTable(db) {
   db.run(`
     CREATE TABLE IF NOT EXISTS trips
       (
+        operator TEXT,
         route_id TEXT,
         service_id TEXT,
         trip_id TEXT PRIMARY KEY,
@@ -136,7 +137,7 @@ async function createTripsTable(db) {
         bikes_allowed INT,
         wheelchair_accessible INT
       )
-  `)
+  `);
 }
 
 async function createShapesTable(db) {
@@ -151,11 +152,12 @@ async function createShapesTable(db) {
         shape_dist_traveled REAL
       )`);
 }
-async function updateShapesTable(db, operator) {
-  db.run(`DELETE FROM shapes`)
+
+async function updateOperatorDataTable(db, operator) {
   const operatorData = await getOperatorData(operator);
   for (const data of operatorData) {
     if (data[0] === "shapes") {
+      db.run(`DELETE FROM shapes WHERE operator='${operator}'`);
       let rows = data[2].split("\r\n");
       rows.forEach((row, index) => {
         rows[index] = [operator].concat(row.split(","));
@@ -172,9 +174,32 @@ async function updateShapesTable(db, operator) {
           }
         });
       });
+    } else if (data[0] === "trips") {
+      let rows = data[2].split("\r\n");
+      db.run(`DELETE FROM trips WHERE operator='${operator}'`);
+      rows.forEach((row, index) => {
+        rows[index] = [operator].concat(row.split(","));
+        console.log(rows[index]);
+        const query = `
+          INSERT INTO trips
+            (operator, route_id, service_id, trip_id, trip_headsign, direction_id, block_id, shape_id, trip_short_name, bikes_allowed, wheelchair_accessible)
+          VALUES
+            (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `;
+        db.run(query, rows[index], (error) => {
+          if (error) {
+            console.error(error);
+          } else {
+          }
+        });
+      });
     }
   }
 }
+// const db = connectDB();
+// createTripsTable(db);
+// updateOperatorDataTable(db, "CT");
+
 
 async function getShapeIds(db, operator) {
   return new Promise((resolve, reject) => {
@@ -201,16 +226,16 @@ async function getShapeCoordinates(db, shapeId) {
       const coordinatesArray = coordinates.map((obj) => {
         return [obj.shape_pt_lon, obj.shape_pt_lat];
       });
-      return resolve(coordinatesArray)
+      return resolve(coordinatesArray);
     });
   });
 }
 
 async function getAllShapeCoordinates(db, operator) {
-  const shapeCoordinates = {}
+  const shapeCoordinates = {};
   const shapeIds = await getShapeIds(db, operator);
   for (const shapeId of shapeIds) {
-    shapeCoordinates[shapeId] = await getShapeCoordinates(db, shapeId)
+    shapeCoordinates[shapeId] = await getShapeCoordinates(db, shapeId);
   }
   return shapeCoordinates;
 }
