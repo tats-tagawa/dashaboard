@@ -28,6 +28,7 @@ function createOperatorsTable(db) {
 }
 
 async function updateOperators(db) {
+  deleteTableData(db, "operators")
   const operators = await getOperators();
   for (const operator of operators) {
     const operatorData = [operator.Id, operator.Name];
@@ -45,8 +46,8 @@ async function updateOperators(db) {
   console.log("Updated operators");
 }
 
-function deleteOperators(db) {
-  db.run("DELETE FROM operators");
+function deleteTableData(db, table) {
+  db.run(`DELETE FROM ${table}`);
 }
 
 async function createPositionsTable(db) {
@@ -66,12 +67,8 @@ async function createPositionsTable(db) {
     )`);
 }
 
-function deletePositions(db) {
-  db.run("DELETE FROM positions");
-}
-
 async function updatePositions(db) {
-  deletePositions(db);
+  deleteTableData(db, 'positions');
   const positions = await getVehiclePositions();
   for (const position of positions) {
     if (position.vehicle.trip) {
@@ -124,6 +121,24 @@ function getPositions(db, operator) {
   });
 }
 
+async function createTripsTable(db) {
+  db.run(`
+    CREATE TABLE IF NOT EXISTS trips
+      (
+        route_id TEXT,
+        service_id TEXT,
+        trip_id TEXT PRIMARY KEY,
+        trip_headsign TEXT,
+        direction_id INT,
+        block_id TEXT,
+        shape_id TEXT,
+        trip_short_name TEXT,
+        bikes_allowed INT,
+        wheelchair_accessible INT
+      )
+  `)
+}
+
 async function createShapesTable(db) {
   db.run(`
     CREATE TABLE IF NOT EXISTS shapes
@@ -136,13 +151,8 @@ async function createShapesTable(db) {
         shape_dist_traveled REAL
       )`);
 }
-
-function deleteShapes(db) {
-  db.run("DELETE FROM shapes");
-}
-
 async function updateShapesTable(db, operator) {
-  console.log("getting data....");
+  db.run(`DELETE FROM shapes`)
   const operatorData = await getOperatorData(operator);
   for (const data of operatorData) {
     if (data[0] === "shapes") {
@@ -207,5 +217,11 @@ async function getAllShapeCoordinates(db, operator) {
 
 // const db = connectDB();
 // console.log(await getAllShapeCoordinates(db, "CT"))
+// db.all('pragma table_info(shapes)', (error, data) => {
+//   if (error) {
+//     console.error(error);
+//   }
+//   console.log(data)
+// })
 
 export { connectDB, getPositions, updatePositions };
