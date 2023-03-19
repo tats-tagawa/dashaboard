@@ -74,7 +74,9 @@ async function createPositionMarkerSource(map, operator, color) {
 // }, 30000);
 
 async function getPositions(operator = "RG") {
-  const response = await fetch(`http://localhost:3000/positions?operator=${operator}`);
+  const response = await fetch(
+    `http://localhost:3000/positions?operator=${operator}`
+  );
   const positions = await response.json();
   const positionsGeoJSON = [];
   for (const position of positions) {
@@ -100,5 +102,6 @@ async function getPositions(operator = "RG") {
 
 async function getShapeCoordinates(tripId) {
   const response = await fetch(`http://localhost:3000/shapes?tripId=${tripId}`);
-  console.log(await response.json());
+  const data = await response.json();
+  return turf.multiLineString(data);
 }
