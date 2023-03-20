@@ -2,9 +2,10 @@ import sqlite3 from "sqlite3";
 import * as dotenv from "dotenv";
 dotenv.config();
 import {
-  getOperators,
+  getOperatorsTransitData,
+  getOperatorColors,
   getVehiclePositions,
-  getOperatorData,
+  getOperatorGTFSDataFeed,
 } from "./transit-data.js";
 
 function connectDB() {
@@ -24,18 +25,20 @@ function createOperatorsTable(db) {
   CREATE TABLE IF NOT EXISTS operators
   (
     id TEXT PRIMARY KEY,
-    name TEXT
+    name TEXT,
+    color TEXT
   )
   `);
 }
 
 async function updateOperators(db) {
   deleteTableData(db, "operators");
-  const operators = await getOperators();
+  const colors = getOperatorColors();
+  const operators = await getOperatorsTransitData();
   for (const operator of operators) {
-    const operatorData = [operator.Id, operator.Name];
+    const operatorData = [operator.Id, operator.Name, colors[operator.Id]];
     db.run(
-      "INSERT INTO operators(id, name) VALUES (?, ?)",
+      "INSERT INTO operators(id, name, color) VALUES (?, ?, ?)",
       operatorData,
       (error) => {
         if (error) {
@@ -46,6 +49,20 @@ async function updateOperators(db) {
     );
   }
   console.log("Updated operators");
+}
+
+function getOperators(db) {
+  return new Promise((resolve, reject) => {
+    let query;
+    query = `SELECT * FROM operators`;
+    db.all(query, (error, rows) => {
+      if (error) {
+        return reject(error);
+      } else {
+        return resolve(rows);
+      }
+    });
+  });
 }
 
 function deleteTableData(db, table) {
@@ -156,7 +173,7 @@ async function createShapesTable(db) {
 }
 
 async function updateOperatorDataTable(db, operator) {
-  const operatorData = await getOperatorData(operator);
+  const operatorData = await getOperatorGTFSDataFeed(operator);
   for (const data of operatorData) {
     if (data[0] === "shapes") {
       db.run(`DELETE FROM shapes WHERE operator='${operator}'`);
@@ -181,7 +198,6 @@ async function updateOperatorDataTable(db, operator) {
       db.run(`DELETE FROM trips WHERE operator='${operator}'`);
       rows.forEach((row, index) => {
         rows[index] = [operator].concat(row.split(","));
-        console.log(rows[index]);
         const query = `
           INSERT INTO trips
             (operator, route_id, service_id, trip_id, trip_headsign, direction_id, block_id, shape_id, trip_short_name, bikes_allowed, wheelchair_accessible)
@@ -200,7 +216,7 @@ async function updateOperatorDataTable(db, operator) {
 }
 // const db = connectDB();
 // createTripsTable(db);
-// updateOperatorDataTable(db, "CT");
+// updateOperatorDataTable(db, "SA");
 async function getTripShapeId(db, tripId) {
   return new Promise((resolve, reject) => {
     const query = `
@@ -265,4 +281,11 @@ async function getAllShapeCoordinates(db, operator) {
 //   console.log(data)
 // })
 
-export { connectDB, getPositions, updatePositions, getTripShapeId, getShapeCoordinates };
+export {
+  connectDB,
+  getOperators,
+  getPositions,
+  updatePositions,
+  getTripShapeId,
+  getShapeCoordinates,
+};

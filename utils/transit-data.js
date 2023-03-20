@@ -11,7 +11,7 @@ import { Writable } from "stream";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-async function getOperators() {
+async function getOperatorsTransitData() {
   try {
     const response = await axios.get(
       `http://api.511.org/transit/gtfsoperators?api_key=${process.env.API_KEY}`
@@ -19,6 +19,14 @@ async function getOperators() {
     return response.data;
   } catch (error) {
     console.error(error);
+  }
+}
+
+function getOperatorColors() {
+  return {
+    "CT": "#E31837",
+    "SA": "#013220",
+    "AM": "#1E1B4B",
   }
 }
 
@@ -111,7 +119,7 @@ async function saveGTFSDataFeed(operator) {
   });
 }
 
-async function getOperatorData(operator) {
+async function getOperatorGTFSDataFeed(operator) {
   try {
     const response = await axios({
       method: "get",
@@ -157,10 +165,11 @@ async function getOperatorData(operator) {
 }
 
 export {
-  getOperators,
+  getOperatorsTransitData,
+  getOperatorColors,
   getVehiclePositions,
   getTripUpdates,
   getGTFSDataFeed,
   saveGTFSDataFeed,
-  getOperatorData,
+  getOperatorGTFSDataFeed,
 };

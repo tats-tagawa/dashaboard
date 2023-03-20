@@ -5,12 +5,13 @@ const map = new mapboxgl.Map({
   style: "mapbox://styles/mapbox/light-v10", // style URL
   center: [-122.17596124368328, 37.66017438365425], // starting position [lng, lat]
   zoom: 10, // starting zoom
-  // center: [-122, 37.4], // starting position [lng, lat]
-  // zoom: 9.5 // starting zoom
 });
 
+const operators = ["CT", "SA"];
 map.on("load", async () => {
-  createPositionMarkerSource(map, "CT", "#E31837");
+  for (operator of operators) {
+    addSourcesAndLayers(map, operator,"#100000");
+  }
 });
 
 const popup = new mapboxgl.Popup({
@@ -18,9 +19,9 @@ const popup = new mapboxgl.Popup({
   closeOnClick: false,
 });
 
-let hoverSource = ""
+let hoverSource = "";
 
-map.on("mousemove", ["CT"], (e) => {
+map.on("mousemove", operators, (e) => {
   map.getCanvas().style.cursor = "pointer";
   const properties = e.features[0].properties;
   const operator = properties.operator;
@@ -34,23 +35,19 @@ map.on("mousemove", ["CT"], (e) => {
     )
     .addTo(map);
   map.setFeatureState(
-    { source: `${operator}-${tripId}`, id: 0},
+    { source: `${operator}-${tripId}`, id: 0 },
     { hover: true }
   );
   hoverSource = `${operator}-${tripId}`;
-  // map.setPaintProperty(`${operator}-${tripId}`, "line-opacity", 1);
 });
 
-map.on("mouseleave", ["CT"], (e) => {
+map.on("mouseleave", operators, (e) => {
   map.getCanvas().style.cursor = "";
   popup.remove();
-  map.setFeatureState(
-    { source: hoverSource, id: 0},
-    { hover: false }
-  ); 
+  map.setFeatureState({ source: hoverSource, id: 0 }, { hover: false });
 });
 
-async function createPositionMarkerSource(map, operator, color) {
+async function addSourcesAndLayers(map, operator, color) {
   const positions = await getPositions(operator);
   map.addSource(operator, {
     type: "geojson",
@@ -146,4 +143,11 @@ async function getShapeCoordinates(tripId) {
   const response = await fetch(`http://localhost:3000/shapes?tripId=${tripId}`);
   const data = await response.json();
   return turf.lineString(data);
+}
+
+async function getOperators() {
+  const response = await fetch("http://localhost:3000/operators");
+  const data = await response.json();
+  console.log(data);
+  return data;
 }
