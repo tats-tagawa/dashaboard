@@ -18,7 +18,9 @@ const popup = new mapboxgl.Popup({
   closeOnClick: false,
 });
 
-map.on("mouseenter", ["CT"], (e) => {
+let hoverSource = ""
+
+map.on("mousemove", ["CT"], (e) => {
   map.getCanvas().style.cursor = "pointer";
   const properties = e.features[0].properties;
   const operator = properties.operator;
@@ -31,29 +33,32 @@ map.on("mouseenter", ["CT"], (e) => {
               <strong>${operator}</strong>`
     )
     .addTo(map);
+  map.setFeatureState(
+    { source: `${operator}-${tripId}`, id: 0},
+    { hover: true }
+  );
+  hoverSource = `${operator}-${tripId}`;
+  // map.setPaintProperty(`${operator}-${tripId}`, "line-opacity", 1);
 });
 
-map.on("mouseleave", ["CT"], () => {
+map.on("mouseleave", ["CT"], (e) => {
   map.getCanvas().style.cursor = "";
   popup.remove();
+  map.setFeatureState(
+    { source: hoverSource, id: 0},
+    { hover: false }
+  ); 
 });
 
-async function updatePositions(operator = "RG") {
-  const positions = await getPositions(operator);
-  const points = {
-    type: "FeatureCollection",
-    features: positions,
-  };
-  map.getSource("CT").setData(points);
-}
-
 async function createPositionMarkerSource(map, operator, color) {
+  const positions = await getPositions(operator);
   map.addSource(operator, {
     type: "geojson",
     data: {
       type: "FeatureCollection",
-      features: await getPositions(operator),
+      features: positions,
     },
+    generateId: true,
   });
 
   map.addLayer({
@@ -67,6 +72,43 @@ async function createPositionMarkerSource(map, operator, color) {
       "circle-stroke-color": "#FFFFFF",
     },
   });
+  for (const position of positions) {
+    const tripId = position.properties.tripId;
+    map.addSource(`${operator}-${tripId}`, {
+      type: "geojson",
+      data: await getShapeCoordinates(tripId),
+      generateId: true,
+    });
+
+    map.addLayer({
+      id: `${operator}-${tripId}`,
+      type: "line",
+      source: `${operator}-${tripId}`,
+      layout: {
+        "line-join": "round",
+        "line-cap": "round",
+      },
+      paint: {
+        "line-color": color,
+        "line-width": 2,
+        "line-opacity": [
+          "case",
+          ["boolean", ["feature-state", "hover"], false],
+          1,
+          0.05,
+        ],
+      },
+    });
+  }
+}
+
+async function updatePositions(operator = "RG") {
+  const positions = await getPositions(operator);
+  const points = {
+    type: "FeatureCollection",
+    features: positions,
+  };
+  map.getSource("CT").setData(points);
 }
 
 // setInterval(() => {
@@ -103,5 +145,5 @@ async function getPositions(operator = "RG") {
 async function getShapeCoordinates(tripId) {
   const response = await fetch(`http://localhost:3000/shapes?tripId=${tripId}`);
   const data = await response.json();
-  return turf.multiLineString(data);
+  return turf.lineString(data);
 }
