@@ -6,11 +6,14 @@ dotenv.config();
 import * as cron from "node-cron";
 import {
   connectDB,
+  updateOperators,
   getOperators,
+  getOperator,
   getPositions,
   updatePositions,
   getTripShapeId,
   getShapeCoordinates,
+  updateOperatorDataTable,
 } from "./utils/sqlite.js";
 import realtime from "./routes/transit-realtime.js";
 import info from "./routes/transit-info.js";
@@ -40,6 +43,7 @@ app.get("/positions", async (req, res) => {
 
 app.get("/shapes", async (req, res) => {
   const data = await getTripShapeId(db, req.query.tripId);
+  console.log(data.shape_id)
   const tripCoordinates = await getShapeCoordinates(db, data.shape_id);
   res.send(tripCoordinates);
 });
@@ -48,3 +52,10 @@ app.get("/operators", async (req, res) => {
   const data = await getOperators(db);
   res.send(data)
 })
+
+app.get("/operator", async (req, res) => {
+  const data = await getOperator(db, req.query.operator);
+  res.send(data)
+})
+
+// updateOperatorDataTable(db,"SC")

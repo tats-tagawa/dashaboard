@@ -24,10 +24,11 @@ async function getOperatorsTransitData() {
 
 function getOperatorColors() {
   return {
-    "CT": "#E31837",
-    "SA": "#013220",
-    "AM": "#1E1B4B",
-  }
+    CT: "#E31837",
+    SA: "#013220",
+    AM: "#1E1B4B",
+    SC: "#4CB4E7",
+  };
 }
 
 /**
@@ -104,6 +105,7 @@ async function saveGTFSDataFeed(operator) {
   const GTFSDateFeedPath = path.join(__dirname, "GTFSDataFeeds", operator);
   await fs.promises.mkdir(GTFSDateFeedPath, { recursive: true });
   const file = `${__dirname}/GTFSDataFeed_${operator}.zip`;
+  console.log(file)
   fs.readFile(file, async (error, data) => {
     if (!error) {
       const zip = JSZip();

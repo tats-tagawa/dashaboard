@@ -7,10 +7,12 @@ const map = new mapboxgl.Map({
   zoom: 10, // starting zoom
 });
 
-const operators = ["CT", "SA"];
+const operators = ["SA", "CT", "SC"];
 map.on("load", async () => {
-  for (operator of operators) {
-    addSourcesAndLayers(map, operator,"#100000");
+  for (const operator of operators) {
+    const operatorGeneralInfo = await getOperator(operator);
+    const color = operatorGeneralInfo[0].color;
+    addSourcesAndLayers(map, operator, color);
   }
 });
 
@@ -21,7 +23,7 @@ const popup = new mapboxgl.Popup({
 
 let hoverSource = "";
 
-map.on("mousemove", operators, (e) => {
+map.on("mouseenter", operators, (e) => {
   map.getCanvas().style.cursor = "pointer";
   const properties = e.features[0].properties;
   const operator = properties.operator;
@@ -71,31 +73,34 @@ async function addSourcesAndLayers(map, operator, color) {
   });
   for (const position of positions) {
     const tripId = position.properties.tripId;
-    map.addSource(`${operator}-${tripId}`, {
-      type: "geojson",
-      data: await getShapeCoordinates(tripId),
-      generateId: true,
-    });
+    const coordinates = await getShapeCoordinates(tripId);
+    if (coordinates) {
+      map.addSource(`${operator}-${tripId}`, {
+        type: "geojson",
+        data: await getShapeCoordinates(tripId),
+        generateId: true,
+      });
 
-    map.addLayer({
-      id: `${operator}-${tripId}`,
-      type: "line",
-      source: `${operator}-${tripId}`,
-      layout: {
-        "line-join": "round",
-        "line-cap": "round",
-      },
-      paint: {
-        "line-color": color,
-        "line-width": 2,
-        "line-opacity": [
-          "case",
-          ["boolean", ["feature-state", "hover"], false],
-          1,
-          0.05,
-        ],
-      },
-    });
+      map.addLayer({
+        id: `${operator}-${tripId}`,
+        type: "line",
+        source: `${operator}-${tripId}`,
+        layout: {
+          "line-join": "round",
+          "line-cap": "round",
+        },
+        paint: {
+          "line-color": color,
+          "line-width": 2,
+          "line-opacity": [
+            "case",
+            ["boolean", ["feature-state", "hover"], false],
+            1,
+            0.05,
+          ],
+        },
+      });
+    }
   }
 }
 
@@ -148,6 +153,13 @@ async function getShapeCoordinates(tripId) {
 async function getOperators() {
   const response = await fetch("http://localhost:3000/operators");
   const data = await response.json();
-  console.log(data);
+  return datas;
+}
+
+async function getOperator(operator) {
+  const response = await fetch(
+    `http://localhost:3000/operator?operator=${operator}`
+  );
+  const data = await response.json();
   return data;
 }

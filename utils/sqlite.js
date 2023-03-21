@@ -18,7 +18,7 @@ function connectDB() {
   return db;
 }
 
-const db = connectDB();
+// const db = connectDB();
 
 function createOperatorsTable(db) {
   db.run(`
@@ -55,6 +55,20 @@ function getOperators(db) {
   return new Promise((resolve, reject) => {
     let query;
     query = `SELECT * FROM operators`;
+    db.all(query, (error, rows) => {
+      if (error) {
+        return reject(error);
+      } else {
+        return resolve(rows);
+      }
+    });
+  });
+}
+
+function getOperator(db, operator) {
+  return new Promise((resolve, reject) => {
+    let query;
+    query = `SELECT * FROM operators WHERE id='${operator}'`;
     db.all(query, (error, rows) => {
       if (error) {
         return reject(error);
@@ -212,11 +226,10 @@ async function updateOperatorDataTable(db, operator) {
         });
       });
     }
+    console.log('Updated Operator Data Table')
   }
 }
-// const db = connectDB();
-// createTripsTable(db);
-// updateOperatorDataTable(db, "SA");
+
 async function getTripShapeId(db, tripId) {
   return new Promise((resolve, reject) => {
     const query = `
@@ -283,9 +296,12 @@ async function getAllShapeCoordinates(db, operator) {
 
 export {
   connectDB,
+  updateOperators,
   getOperators,
+  getOperator,
   getPositions,
   updatePositions,
   getTripShapeId,
   getShapeCoordinates,
+  updateOperatorDataTable,
 };
