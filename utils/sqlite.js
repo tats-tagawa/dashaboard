@@ -133,7 +133,6 @@ async function updatePositions(db) {
       });
     }
   }
-  console.log("Updated positions");
 }
 
 function getPositions(db, operator) {

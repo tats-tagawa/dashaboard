@@ -67,8 +67,8 @@ async function addSourcesAndLayers(map, operator, color) {
     paint: {
       "circle-color": color,
       "circle-radius": 6,
-      "circle-stroke-width": 2,
-      "circle-stroke-color": "#FFFFFF",
+      "circle-stroke-width": 1,
+      "circle-stroke-color": "#000000",
     },
   });
   for (const position of positions) {
@@ -110,12 +110,15 @@ async function updatePositions(operator = "RG") {
     type: "FeatureCollection",
     features: positions,
   };
-  map.getSource("CT").setData(points);
+  map.getSource(operator).setData(points);
 }
 
-// setInterval(() => {
-//   updatePositions("CT");
-// }, 30000);
+setInterval(() => {
+  for (const operator of operators) {
+    updatePositions(operator);
+  }
+  console.log('Updated Positions')
+}, 30000);
 
 async function getPositions(operator = "RG") {
   const response = await fetch(
