@@ -32,8 +32,9 @@ app.listen(port, () => {
 
 const db = connectDB();
 
-cron.schedule("30 * * * * *", async () => {
+cron.schedule("*/15 * * * * *", async () => {
   await updatePositions(db)
+  console.log("Updated positions");
 })
 
 app.get("/positions", async (req, res) => {
@@ -43,7 +44,6 @@ app.get("/positions", async (req, res) => {
 
 app.get("/shapes", async (req, res) => {
   const data = await getTripShapeId(db, req.query.tripId);
-  console.log(data.shape_id)
   const tripCoordinates = await getShapeCoordinates(db, data.shape_id);
   res.send(tripCoordinates);
 });
