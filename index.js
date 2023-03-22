@@ -7,7 +7,9 @@ const map = new mapboxgl.Map({
   zoom: 10, // starting zoom
 });
 
+// Operators to load by default
 const operators = ["SA", "CT", "SC"];
+
 map.on("load", async () => {
   for (const operator of operators) {
     const operatorGeneralInfo = await getOperator(operator);
@@ -21,8 +23,13 @@ const popup = new mapboxgl.Popup({
   closeOnClick: false,
 });
 
+// saves hover state of vehicle positions
 let hoverSource = "";
 
+/**
+ * Show vehicle information markers and highlight
+ * routes when vehicle positions are hovered over.
+ */
 map.on("mouseenter", operators, (e) => {
   map.getCanvas().style.cursor = "pointer";
   const properties = e.features[0].properties;
@@ -36,6 +43,7 @@ map.on("mouseenter", operators, (e) => {
               <strong>${operator}</strong>`
     )
     .addTo(map);
+
   map.setFeatureState(
     { source: `${operator}-${tripId}`, id: 0 },
     { hover: true }
@@ -49,6 +57,13 @@ map.on("mouseleave", operators, (e) => {
   map.setFeatureState({ source: hoverSource, id: 0 }, { hover: false });
 });
 
+/**
+ * Create and add vehicle position and route layers for
+ * specified operator.
+ * @param {object} map Object
+ * @param {string} operator - operator's code name
+ * @param {string} color - hex color value
+ */
 async function addSourcesAndLayers(map, operator, color) {
   const positions = await getPositions(operator);
   map.addSource(operator, {
@@ -71,6 +86,7 @@ async function addSourcesAndLayers(map, operator, color) {
       "circle-stroke-color": "#000000",
     },
   });
+
   for (const position of positions) {
     const tripId = position.properties.tripId;
     const coordinates = await getShapeCoordinates(tripId);
@@ -104,6 +120,10 @@ async function addSourcesAndLayers(map, operator, color) {
   }
 }
 
+/**
+ * Update vehicle positions on map
+ * @param {string} operator - operator's code name
+ */
 async function updatePositions(operator = "RG") {
   const positions = await getPositions(operator);
   const points = {
@@ -117,9 +137,14 @@ setInterval(() => {
   for (const operator of operators) {
     updatePositions(operator);
   }
-  console.log('Updated Positions')
+  console.log("Updated Positions");
 }, 30000);
 
+/**
+ * Retrive current vehicle positions and update to GeoJSON
+ * @param {string} operator - operator's code name
+ * @returns {object} GeoJSON object of all vehicle positions
+ */
 async function getPositions(operator = "RG") {
   const response = await fetch(
     `http://localhost:3000/positions?operator=${operator}`
@@ -147,18 +172,32 @@ async function getPositions(operator = "RG") {
   return positionsGeoJSON;
 }
 
+/**
+ * Return coordinates of vehicles route.
+ * @param {string} tripId
+ * @returns {Feature}
+ */
 async function getShapeCoordinates(tripId) {
   const response = await fetch(`http://localhost:3000/shapes?tripId=${tripId}`);
   const data = await response.json();
   return turf.lineString(data);
 }
 
+/**
+ * Get all operator information
+ * @returns {object}
+ */
 async function getOperators() {
   const response = await fetch("http://localhost:3000/operators");
   const data = await response.json();
-  return datas;
+  return data;
 }
 
+/**
+ * Get specified operator information
+ * @param {string} operator - operator's code name
+ * @returns {object}
+ */
 async function getOperator(operator) {
   const response = await fetch(
     `http://localhost:3000/operator?operator=${operator}`
