@@ -89,11 +89,11 @@ async function addSourcesAndLayers(map, operator, color) {
 
   for (const position of positions) {
     const tripId = position.properties.tripId;
-    const coordinates = await getShapeCoordinates(tripId);
+    const coordinates = await getShapeCoordinates(operator, tripId);
     if (coordinates) {
       map.addSource(`${operator}-${tripId}`, {
         type: "geojson",
-        data: await getShapeCoordinates(tripId),
+        data: coordinates,
         generateId: true,
       });
 
@@ -177,8 +177,10 @@ async function getPositions(operator = "RG") {
  * @param {string} tripId
  * @returns {Feature}
  */
-async function getShapeCoordinates(tripId) {
-  const response = await fetch(`http://localhost:3000/shapes?tripId=${tripId}`);
+async function getShapeCoordinates(operator, tripId) {
+  const response = await fetch(
+    `http://localhost:3000/shapes?operator=${operator}&tripId=${tripId}`
+  );
   const data = await response.json();
   return turf.lineString(data);
 }

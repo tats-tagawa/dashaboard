@@ -3,3 +3,4 @@ node_modules
 GTFSDataFeeds
 .DS_Store
 *.db
+*.db-journal

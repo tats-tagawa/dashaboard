@@ -43,7 +43,7 @@ app.get("/positions", async (req, res) => {
 });
 
 app.get("/shapes", async (req, res) => {
-  const data = await getTripShapeId(db, req.query.tripId);
+  const data = await getTripShapeId(db, req.query.operator, req.query.tripId);
   const tripCoordinates = await getShapeCoordinates(db, data.shape_id);
   res.send(tripCoordinates);
 });

@@ -24,10 +24,42 @@ async function getOperatorsTransitData() {
 
 function getOperatorColors() {
   return {
+    CC: "#000000",
+    AC: "#000000",
+    CE: "#000000",
+    CM: "#000000",
     CT: "#E31837",
+    DE: "#000000",
+    EM: "#000000",
+    FS: "#000000",
+    GF: "#000000",
+    GG: "#000000",
+    MA: "#000000",
+    MB: "#000000",
+    MV: "#000000",
+    PE: "#000000",
+    RV: "#000000",
     SA: "#013220",
-    AM: "#1E1B4B",
+    SB: "#000000",
     SC: "#4CB4E7",
+    SF: "#000000",
+    SI: "#000000",
+    SM: "#000000",
+    SO: "#000000",
+    SR: "#000000",
+    SS: "#000000",
+    ST: "#000000",
+    TD: "#000000",
+    TF: "#000000",
+    UC: "#000000",
+    VN: "#000000",
+    WC: "#000000",
+    WH: "#000000",
+    VC: "#000000",
+    AM: "#1E1B4B",
+    BA: "#000000",
+    AF: "#000000",
+    "3D": "#000000",
   };
 }
 
@@ -105,7 +137,7 @@ async function saveGTFSDataFeed(operator) {
   const GTFSDateFeedPath = path.join(__dirname, "GTFSDataFeeds", operator);
   await fs.promises.mkdir(GTFSDateFeedPath, { recursive: true });
   const file = `${__dirname}/GTFSDataFeed_${operator}.zip`;
-  console.log(file)
+  console.log(file);
   fs.readFile(file, async (error, data) => {
     if (!error) {
       const zip = JSZip();
@@ -154,10 +186,10 @@ async function getOperatorGTFSDataFeed(operator) {
               const rows = parts.join("\r\n");
               files.push([filename, header, rows]);
             }
-            return resolve(files);
+            resolve(files);
           });
         } catch (error) {
-          return reject(error);
+          reject(error);
         }
       });
     }

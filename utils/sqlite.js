@@ -18,7 +18,7 @@ function connectDB() {
   return db;
 }
 
-// const db = connectDB();
+const db = connectDB();
 
 function createOperatorsTable(db) {
   db.run(`
@@ -36,19 +36,21 @@ async function updateOperators(db) {
   const colors = getOperatorColors();
   const operators = await getOperatorsTransitData();
   for (const operator of operators) {
-    const operatorData = [operator.Id, operator.Name, colors[operator.Id]];
-    db.run(
-      "INSERT INTO operators(id, name, color) VALUES (?, ?, ?)",
-      operatorData,
-      (error) => {
-        if (error) {
-          console.error(error.message);
-        } else {
+    if (operator.Id !== "RG") {
+      const operatorData = [operator.Id, operator.Name, colors[operator.Id]];
+      db.run(
+        "INSERT INTO operators(id, name, color) VALUES (?, ?, ?)",
+        operatorData,
+        (error) => {
+          if (error) {
+            console.error(error.message);
+          } else {
+          }
         }
-      }
-    );
+      );
+    }
   }
-  console.log("Updated operators");
+  console.log("Updated Operators List");
 }
 
 function getOperators(db) {
@@ -57,9 +59,9 @@ function getOperators(db) {
     query = `SELECT * FROM operators`;
     db.all(query, (error, rows) => {
       if (error) {
-        return reject(error);
+        reject(error);
       } else {
-        return resolve(rows);
+        resolve(rows);
       }
     });
   });
@@ -71,9 +73,9 @@ function getOperator(db, operator) {
     query = `SELECT * FROM operators WHERE id='${operator}'`;
     db.all(query, (error, rows) => {
       if (error) {
-        return reject(error);
+        reject(error);
       } else {
-        return resolve(rows);
+        resolve(rows);
       }
     });
   });
@@ -145,9 +147,9 @@ function getPositions(db, operator) {
     }
     db.all(query, (error, rows) => {
       if (error) {
-        return reject(error);
+        reject(error);
       } else {
-        return resolve(rows);
+        resolve(rows);
       }
     });
   });
@@ -160,7 +162,7 @@ async function createTripsTable(db) {
         operator TEXT,
         route_id TEXT,
         service_id TEXT,
-        trip_id TEXT PRIMARY KEY,
+        trip_id TEXT,
         trip_headsign TEXT,
         direction_id INT,
         block_id TEXT,
@@ -186,59 +188,89 @@ async function createShapesTable(db) {
 }
 
 async function updateOperatorDataTable(db, operator) {
+  console.log(`Updating ${operator} Data Table`);
   const operatorData = await getOperatorGTFSDataFeed(operator);
-  for (const data of operatorData) {
+  for await (const data of operatorData) {
     if (data[0] === "shapes") {
-      db.run(`DELETE FROM shapes WHERE operator='${operator}'`);
-      let rows = data[2].split("\r\n");
-      rows.forEach((row, index) => {
-        rows[index] = [operator].concat(row.split(","));
-        const query = `
-          INSERT INTO shapes
-            (operator, shape_id, shape_pt_lon, shape_pt_lat, shape_pt_sequence, shape_dist_traveled)
-          VALUES
-            (?, ?, ?, ?, ?, ?)
-          `;
-        db.run(query, rows[index], (error) => {
-          if (error) {
-            console.error(error);
-          } else {
-          }
-        });
-      });
+      const status = await updateOperatorShapes(db, data, operator);
+      console.log(status);
     } else if (data[0] === "trips") {
-      let rows = data[2].split("\r\n");
-      db.run(`DELETE FROM trips WHERE operator='${operator}'`);
-      rows.forEach((row, index) => {
-        rows[index] = [operator].concat(row.split(","));
-        const query = `
-          INSERT INTO trips
-            (operator, route_id, service_id, trip_id, trip_headsign, direction_id, block_id, shape_id, trip_short_name, bikes_allowed, wheelchair_accessible)
-          VALUES
-            (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-          `;
-        db.run(query, rows[index], (error) => {
-          if (error) {
-            console.error(error);
-          } else {
-          }
-        });
-      });
+      const status = await updateOperatorTrips(db, data, operator);
+      console.log(status);
+    } else {
     }
-    console.log('Updated Operator Data Table')
   }
+
+  console.log(`Updated ${operator} Data Table`);
 }
 
-async function getTripShapeId(db, tripId) {
+function updateOperatorShapes(db, data, operator) {
+  return new Promise((resolve, reject) => {
+    db.run(`DELETE FROM shapes WHERE operator='${operator}'`);
+    let rows = data[2].split("\r\n");
+    for (const [index, row] of rows.entries()) {
+      rows[index] = [operator].concat(row.split(","));
+      const query = `
+        INSERT INTO shapes
+          (operator, shape_id, shape_pt_lon, shape_pt_lat, shape_pt_sequence, shape_dist_traveled)
+        VALUES
+          (?, ?, ?, ?, ?, ?)
+        `;
+      db.run(query, rows[index], (error) => {
+        if (error) {
+          console.log(`Shapes Error - ${rows[index]}`);
+          reject(error);
+        } else {
+        }
+      });
+    }
+    resolve(`Updated ${operator} Shapes`);
+  });
+}
+
+function updateOperatorTrips(db, data, operator) {
+  return new Promise((resolve, reject) => {
+    db.run(`DELETE FROM trips WHERE operator='${operator}'`);
+    let rows = data[2].split("\r\n");
+    for (let [index, row] of rows.entries()) {
+      // split by commas except when commas are within double quotes
+      // regex from https://stackoverflow.com/q/11456850/4855664
+      const re = /(".*?"|[^",\s]+)(?=\s*,|\s*$)/g
+      row = row.match(re);
+      row = row.map(el =>  el.replaceAll('"',''))
+
+      // add operator id at index 0
+      rows[index] = [operator].concat(row);
+
+      const query = `
+        INSERT INTO trips
+          (operator, route_id, service_id, trip_id, trip_headsign, direction_id, block_id, shape_id, trip_short_name, bikes_allowed, wheelchair_accessible)
+        VALUES
+          (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `;
+      db.run(query, rows[index], (error) => {
+        if (error) {
+          console.log(`Trips Error - ${rows[index]}`);
+          console.error(error);
+          reject(error);
+        } else {
+        }
+      });
+    }
+    resolve(`Updated ${operator} Trips`);
+  });
+}
+
+async function getTripShapeId(db, operator, tripId) {
   return new Promise((resolve, reject) => {
     const query = `
-    SELECT shape_id FROM trips WHERE trip_id='${tripId}'
+    SELECT shape_id FROM trips WHERE operator='${operator} AND trip_id='${tripId}'
   `;
     db.get(query, (error, row) => {
       if (error) {
-        return reject(error);
+        reject(error);
       }
-      return resolve(row);
+      resolve(row);
     });
   });
 }
@@ -250,12 +282,12 @@ async function getShapeIds(db, operator) {
     const query = `SELECT DISTINCT shape_id FROM shapes WHERE operator='${operator}'`;
     db.all(query, (error, rows) => {
       if (error) {
-        return reject(error);
+        reject(error);
       }
       rows = rows.map((obj) => {
         return obj.shape_id;
       });
-      return resolve(rows);
+      resolve(rows);
     });
   });
 }
@@ -265,12 +297,12 @@ async function getShapeCoordinates(db, shapeId) {
     const coordinate_query = `SELECT shape_pt_lon, shape_pt_lat FROM shapes WHERE shape_id='${shapeId}' ORDER BY shape_pt_sequence`;
     db.all(coordinate_query, (error, coordinates) => {
       if (error) {
-        return reject(error);
+        reject(error);
       }
       const coordinatesArray = coordinates.map((obj) => {
         return [obj.shape_pt_lon, obj.shape_pt_lat];
       });
-      return resolve(coordinatesArray);
+      resolve(coordinatesArray);
     });
   });
 }
@@ -285,7 +317,18 @@ async function getAllShapeCoordinates(db, operator) {
 }
 
 // const db = connectDB();
-// console.log(await getAllShapeCoordinates(db, "CT"))
+
+async function updateAllOperators() {
+  await updateOperators(db);
+
+  const operators = await getOperators(db);
+  for (const operator of operators) {
+    console.log(`Updating ${operator.id} ------`);
+    await updateOperatorDataTable(db, operator.id);
+  }
+  console.log("Updated All");
+}
+
 // db.all('pragma table_info(shapes)', (error, data) => {
 //   if (error) {
 //     console.error(error);
