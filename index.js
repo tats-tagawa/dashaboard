@@ -8,7 +8,7 @@ const map = new mapboxgl.Map({
 });
 
 // Operators to load by default
-const operators = ["SA", "CT", "AM"];
+const operators = ["SA", "CT", "SC"];
 // const operators = ["SC"];
 
 map.on("load", async () => {
