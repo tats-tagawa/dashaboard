@@ -8,7 +8,8 @@ const map = new mapboxgl.Map({
 });
 
 // Operators to load by default
-const operators = ["SA", "CT", "SC"];
+const operators = ["SA", "CT", "AM"];
+// const operators = ["SC"];
 
 map.on("load", async () => {
   for (const operator of operators) {
@@ -182,7 +183,11 @@ async function getShapeCoordinates(operator, tripId) {
     `http://localhost:3000/shapes?operator=${operator}&tripId=${tripId}`
   );
   const data = await response.json();
+  if (data.length) {
   return turf.lineString(data);
+  } else {
+  return false;
+  }
 }
 
 /**
@@ -201,9 +206,11 @@ async function getOperators() {
  * @returns {object}
  */
 async function getOperator(operator) {
-  const response = await fetch(
-    `http://localhost:3000/operator?operator=${operator}`
-  );
-  const data = await response.json();
-  return data;
+  return new Promise(async (resolve, reject) => {
+    const response = await fetch(
+      `http://localhost:3000/operator?operator=${operator}`
+    );
+    const data = await response.json();
+    resolve(data);
+  });
 }

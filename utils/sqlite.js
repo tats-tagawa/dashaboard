@@ -109,6 +109,7 @@ async function updatePositions(db) {
     if (position.vehicle.trip) {
       const [operator, tripId] = position.vehicle.trip.tripId.split(":");
       const [_, routeId] = position.vehicle.trip.routeId.split(":");
+      // const shapeId = await getTripShapeId(db, operator, tripId)
       const data = [
         `${position.vehicle.trip.tripId}:${position.vehicle.vehicle.id}`,
         operator,
@@ -235,13 +236,11 @@ function updateOperatorTrips(db, data, operator) {
     for (let [index, row] of rows.entries()) {
       // split by commas except when commas are within double quotes
       // regex from https://stackoverflow.com/q/11456850/4855664
-      const re = /(".*?"|[^",\s]+)(?=\s*,|\s*$)/g
+      const re = /(".*?"|[^",\s]+)(?=\s*,|\s*$)|(,,)/g;
       row = row.match(re);
-      row = row.map(el =>  el.replaceAll('"',''))
-
+      row = row.map((el) => el.replaceAll('"', ""));
       // add operator id at index 0
       rows[index] = [operator].concat(row);
-
       const query = `
         INSERT INTO trips
           (operator, route_id, service_id, trip_id, trip_headsign, direction_id, block_id, shape_id, trip_short_name, bikes_allowed, wheelchair_accessible)
@@ -264,7 +263,7 @@ function updateOperatorTrips(db, data, operator) {
 async function getTripShapeId(db, operator, tripId) {
   return new Promise((resolve, reject) => {
     const query = `
-    SELECT shape_id FROM trips WHERE operator='${operator} AND trip_id='${tripId}'
+    SELECT shape_id FROM trips WHERE operator='${operator}' AND trip_id='${tripId}'
   `;
     db.get(query, (error, row) => {
       if (error) {
@@ -316,11 +315,8 @@ async function getAllShapeCoordinates(db, operator) {
   return shapeCoordinates;
 }
 
-// const db = connectDB();
-
 async function updateAllOperators() {
   await updateOperators(db);
-
   const operators = await getOperators(db);
   for (const operator of operators) {
     console.log(`Updating ${operator.id} ------`);

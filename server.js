@@ -32,7 +32,7 @@ app.listen(port, () => {
 
 const db = connectDB();
 
-cron.schedule("*/15 * * * * *", async () => {
+cron.schedule("*/60 * * * * *", async () => {
   await updatePositions(db)
   console.log("Updated positions");
 })
@@ -57,5 +57,3 @@ app.get("/operator", async (req, res) => {
   const data = await getOperator(db, req.query.operator);
   res.send(data)
 })
-
-// updateOperatorDataTable(db,"SC")
