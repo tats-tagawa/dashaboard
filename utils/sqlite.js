@@ -92,6 +92,7 @@ async function createPositionsTable(db) {
       id TEXT PRIMARY KEY,
       operator TEXT,
       trip_id TEXT,
+      shape_id TEXT,
       vehicle_id TEXT,
       route_id TEXT,
       direction_id INT,
@@ -103,37 +104,45 @@ async function createPositionsTable(db) {
 }
 
 async function updatePositions(db) {
+  console.log("Updating Positions");
   deleteTableData(db, "positions");
   const positions = await getVehiclePositions();
   for (const position of positions) {
     if (position.vehicle.trip) {
       const [operator, tripId] = position.vehicle.trip.tripId.split(":");
       const [_, routeId] = position.vehicle.trip.routeId.split(":");
-      // const shapeId = await getTripShapeId(db, operator, tripId)
-      const data = [
-        `${position.vehicle.trip.tripId}:${position.vehicle.vehicle.id}`,
-        operator,
-        tripId,
-        position.vehicle.vehicle.id,
-        routeId,
-        position.vehicle.trip.directionId,
-        position.vehicle.position.latitude,
-        position.vehicle.position.longitude,
-        position.vehicle.position.bearing,
-        position.vehicle.position.speed,
-      ];
-      const query = `
-        INSERT INTO positions
-          (id, operator, trip_id, vehicle_id, route_id, direction_id, latitude, longitude, bearing, speed)
-        VALUES
-          (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `;
-      db.run(query, data, (error) => {
-        if (error) {
-          console.error(error);
+      try {
+        let shapeId = await getTripShapeId(db, operator, tripId);
+        if (shapeId) {
+          shapeId = shapeId.shape_id;
         } else {
+          shapeId = null;
         }
-      });
+        const data = [
+          `${position.vehicle.trip.tripId}:${position.vehicle.vehicle.id}`,
+          operator,
+          tripId,
+          shapeId,
+          position.vehicle.vehicle.id,
+          routeId,
+          position.vehicle.trip.directionId,
+          position.vehicle.position.latitude,
+          position.vehicle.position.longitude,
+          position.vehicle.position.bearing,
+          position.vehicle.position.speed,
+        ];
+        const query = `
+        INSERT INTO positions
+          (id, operator, trip_id, shape_id, vehicle_id, route_id, direction_id, latitude, longitude, bearing, speed)
+        VALUES
+          (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `;
+        db.run(query, data, (err) => {
+          if (err) console.error(err);
+        });
+      } catch (error) {
+        console.error(error);
+      }
     }
   }
 }
@@ -269,7 +278,12 @@ async function getTripShapeId(db, operator, tripId) {
       if (error) {
         reject(error);
       }
-      resolve(row);
+      if (row) {
+        resolve(row);
+      } else {
+        console.log(`${operator}-${tripId}: ${row}`);
+        resolve(undefined)
+      }
     });
   });
 }

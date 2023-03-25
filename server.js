@@ -32,10 +32,11 @@ app.listen(port, () => {
 
 const db = connectDB();
 
-cron.schedule("*/60 * * * * *", async () => {
-  await updatePositions(db)
+cron.schedule("*/20 * * * * *", async () => {
+  await updatePositions(db);
+  console.log("Updated!");
   console.log("Updated positions");
-})
+});
 
 app.get("/positions", async (req, res) => {
   const positions = await getPositions(db, req.query.operator);
@@ -50,10 +51,10 @@ app.get("/shapes", async (req, res) => {
 
 app.get("/operators", async (req, res) => {
   const data = await getOperators(db);
-  res.send(data)
-})
+  res.send(data);
+});
 
 app.get("/operator", async (req, res) => {
   const data = await getOperator(db, req.query.operator);
-  res.send(data)
-})
+  res.send(data);
+});
