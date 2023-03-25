@@ -281,7 +281,6 @@ async function getTripShapeId(db, operator, tripId) {
       if (row) {
         resolve(row);
       } else {
-        console.log(`${operator}-${tripId}: ${row}`);
         resolve(undefined)
       }
     });
@@ -305,9 +304,9 @@ async function getShapeIds(db, operator) {
   });
 }
 
-async function getShapeCoordinates(db, shapeId) {
+async function getShapeCoordinates(db, operator, shapeId) {
   return new Promise((resolve, reject) => {
-    const coordinate_query = `SELECT shape_pt_lon, shape_pt_lat FROM shapes WHERE shape_id='${shapeId}' ORDER BY shape_pt_sequence`;
+    const coordinate_query = `SELECT shape_pt_lon, shape_pt_lat FROM shapes WHERE operator='${operator}' AND shape_id='${shapeId}' ORDER BY shape_pt_sequence`;
     db.all(coordinate_query, (error, coordinates) => {
       if (error) {
         reject(error);
@@ -339,6 +338,7 @@ async function updateAllOperators() {
   console.log("Updated All");
 }
 
+// updateOperatorDataTable(db, "SM")
 // db.all('pragma table_info(shapes)', (error, data) => {
 //   if (error) {
 //     console.error(error);

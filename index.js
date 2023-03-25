@@ -8,7 +8,7 @@ const map = new mapboxgl.Map({
 });
 
 // Operators to load by default
-const operators = ["SA", "CT", "GF"];
+const operators = ["SA", "CT", "CC", "SM"];
 // const operators = ["SC"];
 
 map.on("load", async () => {
@@ -37,25 +37,30 @@ map.on("mouseenter", operators, (e) => {
   const operator = properties.operator;
   const coordinates = [e.lngLat.lng, e.lngLat.lat];
   const tripId = properties.tripId;
+  const shapeId = properties.shapeId;
   popup
     .setLngLat(coordinates)
     .setHTML(
-      `<strong>${tripId}</strong><br>
-              <strong>${operator}</strong>`
+      `<strong>Trip ID: ${tripId}</strong><br>
+      <strong>Shape ID: ${shapeId}</strong><br>
+      <strong>Operator: ${operator}</strong>`
     )
     .addTo(map);
-
-  map.setFeatureState(
-    { source: `${operator}-${tripId}`, id: 0 },
-    { hover: true }
-  );
-  hoverSource = `${operator}-${tripId}`;
+  if (map.getSource(`${operator}-${tripId}`)) {
+    map.setFeatureState(
+      { source: `${operator}-${tripId}`, id: 0 },
+      { hover: true }
+    );
+    hoverSource = `${operator}-${tripId}`;
+  }
 });
 
 map.on("mouseleave", operators, (e) => {
   map.getCanvas().style.cursor = "";
   popup.remove();
-  map.setFeatureState({ source: hoverSource, id: 0 }, { hover: false });
+  if (map.getSource(hoverSource)) {
+    map.setFeatureState({ source: hoverSource, id: 0 }, { hover: false });
+  }
 });
 
 /**
@@ -90,33 +95,42 @@ async function addSourcesAndLayers(map, operator, color) {
 
   for (const position of positions) {
     const tripId = position.properties.tripId;
-    const coordinates = await getShapeCoordinates(operator, tripId);
-    if (coordinates) {
-      map.addSource(`${operator}-${tripId}`, {
-        type: "geojson",
-        data: coordinates,
-        generateId: true,
-      });
+    const shapeId = position.properties.shapeId;
+    if (shapeId) {
+      const coordinates = await getShapeCoordinates(operator, shapeId);
+      if (coordinates) {
+        map.addSource(`${operator}-${tripId}`, {
+          type: "geojson",
+          data: coordinates,
+          generateId: true,
+        });
 
-      map.addLayer({
-        id: `${operator}-${tripId}`,
-        type: "line",
-        source: `${operator}-${tripId}`,
-        layout: {
-          "line-join": "round",
-          "line-cap": "round",
-        },
-        paint: {
-          "line-color": color,
-          "line-width": 2,
-          "line-opacity": [
-            "case",
-            ["boolean", ["feature-state", "hover"], false],
-            1,
-            0.05,
-          ],
-        },
-      });
+        map.addLayer({
+          id: `${operator}-${tripId}`,
+          type: "line",
+          source: `${operator}-${tripId}`,
+          layout: {
+            "line-join": "round",
+            "line-cap": "round",
+          },
+          paint: {
+            "line-color": color,
+            // "line-width": 2,
+            "line-width": [
+              "case",
+              ["boolean", ["feature-state", "hover"], false],
+              3,
+              2,
+            ],
+            "line-opacity": [
+              "case",
+              ["boolean", ["feature-state", "hover"], false],
+              1,
+              0.1,
+            ],
+          },
+        });
+      }
     }
   }
 }
@@ -125,7 +139,7 @@ async function addSourcesAndLayers(map, operator, color) {
  * Update vehicle positions on map
  * @param {string} operator - operator's code name
  */
-async function updatePositions(operator = "RG") {
+async function updatePositions(operator) {
   const positions = await getPositions(operator);
   const points = {
     type: "FeatureCollection",
@@ -146,7 +160,7 @@ setInterval(() => {
  * @param {string} operator - operator's code name
  * @returns {object} GeoJSON object of all vehicle positions
  */
-async function getPositions(operator = "RG") {
+async function getPositions(operator) {
   const response = await fetch(
     `http://localhost:3000/positions?operator=${operator}`
   );
@@ -159,6 +173,7 @@ async function getPositions(operator = "RG") {
       properties: {
         operator: position.operator,
         tripId: position.trip_id,
+        shapeId: position.shape_id,
         coordinates: coordinates,
         directionId: position.direction_id,
         bearing: position.bearing,
@@ -178,15 +193,16 @@ async function getPositions(operator = "RG") {
  * @param {string} tripId
  * @returns {Feature}
  */
-async function getShapeCoordinates(operator, tripId) {
+async function getShapeCoordinates(operator, shapeId) {
   const response = await fetch(
-    `http://localhost:3000/shapes?operator=${operator}&tripId=${tripId}`
+    // `http://localhost:3000/shapes?operator=${operator}&tripId=${tripId}`
+    `http://localhost:3000/shapes?operator=${operator}&shapeId=${shapeId}`
   );
   const data = await response.json();
   if (data.length) {
-  return turf.lineString(data);
+    return turf.lineString(data);
   } else {
-  return false;
+    return false;
   }
 }
 

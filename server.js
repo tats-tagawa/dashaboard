@@ -34,8 +34,7 @@ const db = connectDB();
 
 cron.schedule("*/20 * * * * *", async () => {
   await updatePositions(db);
-  console.log("Updated!");
-  console.log("Updated positions");
+  console.log("Updated Positions");
 });
 
 app.get("/positions", async (req, res) => {
@@ -44,9 +43,13 @@ app.get("/positions", async (req, res) => {
 });
 
 app.get("/shapes", async (req, res) => {
-  const data = await getTripShapeId(db, req.query.operator, req.query.tripId);
-  const tripCoordinates = await getShapeCoordinates(db, data.shape_id);
-  res.send(tripCoordinates);
+  // const data = await getTripShapeId(db, req.query.operator, req.query.tripId);
+  try {
+    const tripCoordinates = await getShapeCoordinates(db, req.query.operator, req.query.shapeId);
+    res.send(tripCoordinates);
+  } catch (error) {
+    console.error(error);
+  }
 });
 
 app.get("/operators", async (req, res) => {
