@@ -24,7 +24,7 @@ async function getOperatorsTransitData() {
 
 function getOperatorColors() {
   return {
-    CC: "#000000",
+    CC: "#F5BC5B",
     AC: "#000000",
     CE: "#000000",
     CM: "#000000",
@@ -155,6 +155,7 @@ async function saveGTFSDataFeed(operator) {
 
 async function getOperatorGTFSDataFeed(operator) {
   try {
+    console.log(`Downloading ${operator} GTFS Data`);
     const response = await axios({
       method: "get",
       url: `http://api.511.org/Transit/datafeeds?api_key=${process.env.API_KEY}&operator_id=${operator}`,
@@ -186,6 +187,7 @@ async function getOperatorGTFSDataFeed(operator) {
               const rows = parts.join("\r\n");
               files.push([filename, header, rows]);
             }
+            console.log(`Downloaded ${operator} GTFS Data`);
             resolve(files);
           });
         } catch (error) {

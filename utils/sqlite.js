@@ -202,10 +202,12 @@ async function updateOperatorDataTable(db, operator) {
   const operatorData = await getOperatorGTFSDataFeed(operator);
   for await (const data of operatorData) {
     if (data[0] === "shapes") {
-      const status = await updateOperatorShapes(db, data, operator);
+      console.log(`Updating ${operator} Shapes`)
+      const status = await updateOperatorShapes(db, data[2], operator);
       console.log(status);
     } else if (data[0] === "trips") {
-      const status = await updateOperatorTrips(db, data, operator);
+      console.log(`Updating ${operator} Trips`)
+      const status = await updateOperatorTrips(db, data[2], operator);
       console.log(status);
     } else {
     }
@@ -213,60 +215,72 @@ async function updateOperatorDataTable(db, operator) {
 
   console.log(`Updated ${operator} Data Table`);
 }
-
-function updateOperatorShapes(db, data, operator) {
-  return new Promise((resolve, reject) => {
-    db.run(`DELETE FROM shapes WHERE operator='${operator}'`);
-    let rows = data[2].split("\r\n");
-    for (const [index, row] of rows.entries()) {
-      rows[index] = [operator].concat(row.split(","));
+async function updateOperatorShapes(db, data, operator) {
+  db.run(`DELETE FROM shapes WHERE operator='${operator}'`);
+  let rows = data.split("\r\n");
+  let promises = rows.map((row) => {
+    return new Promise((resolve, reject) => {
+      const shapeData = [operator].concat(row.split(","));
       const query = `
-        INSERT INTO shapes
-          (operator, shape_id, shape_pt_lon, shape_pt_lat, shape_pt_sequence, shape_dist_traveled)
-        VALUES
-          (?, ?, ?, ?, ?, ?)
-        `;
-      db.run(query, rows[index], (error) => {
+          INSERT INTO shapes
+            (operator, shape_id, shape_pt_lon, shape_pt_lat, shape_pt_sequence, shape_dist_traveled)
+          VALUES
+            (?, ?, ?, ?, ?, ?)
+          `;
+      db.run(query, shapeData, (error) => {
         if (error) {
-          console.log(`Shapes Error - ${rows[index]}`);
+          console.log(`Shapes Error - ${shapeData}`);
           reject(error);
         } else {
+          resolve("Done");
         }
       });
-    }
-    resolve(`Updated ${operator} Shapes`);
+    });
   });
+
+  try {
+    await Promise.all(promises);
+  } catch (error) {
+    console.error(error);
+  }
+  return `Updated ${operator} Shapes`;
 }
 
-function updateOperatorTrips(db, data, operator) {
-  return new Promise((resolve, reject) => {
-    db.run(`DELETE FROM trips WHERE operator='${operator}'`);
-    let rows = data[2].split("\r\n");
-    for (let [index, row] of rows.entries()) {
+async function updateOperatorTrips(db, data, operator) {
+  db.run(`DELETE FROM trips WHERE operator='${operator}'`);
+  let rows = data.split("\r\n");
+  let promises = rows.map((row) => {
+    return new Promise((resolve, reject) => {
       // split by commas except when commas are within double quotes
       // regex from https://stackoverflow.com/q/11456850/4855664
       const re = /(".*?"|[^",\s]+)(?=\s*,|\s*$)|(,,)/g;
       row = row.match(re);
       row = row.map((el) => el.replaceAll('"', ""));
       // add operator id at index 0
-      rows[index] = [operator].concat(row);
+      const tripData = [operator].concat(row);
       const query = `
         INSERT INTO trips
           (operator, route_id, service_id, trip_id, trip_headsign, direction_id, block_id, shape_id, trip_short_name, bikes_allowed, wheelchair_accessible)
         VALUES
           (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
-      db.run(query, rows[index], (error) => {
+      db.run(query, tripData, (error) => {
         if (error) {
-          console.log(`Trips Error - ${rows[index]}`);
+          console.log(`Trips Error - ${tripData}`);
           console.error(error);
           reject(error);
         } else {
+          resolve("Done");
         }
       });
-    }
-    resolve(`Updated ${operator} Trips`);
+    });
   });
+  try {
+    await Promise.all(promises);
+  } catch (error) {
+    console.error(error);
+  }
+  return `Updated ${operator} Trips`;
 }
 
 async function getTripShapeId(db, operator, tripId) {
@@ -281,7 +295,7 @@ async function getTripShapeId(db, operator, tripId) {
       if (row) {
         resolve(row);
       } else {
-        resolve(undefined)
+        resolve(undefined);
       }
     });
   });
@@ -338,7 +352,8 @@ async function updateAllOperators() {
   console.log("Updated All");
 }
 
-// updateOperatorDataTable(db, "SM")
+updateAllOperators();
+//
 // db.all('pragma table_info(shapes)', (error, data) => {
 //   if (error) {
 //     console.error(error);
