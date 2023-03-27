@@ -15,7 +15,11 @@ map.on("load", async () => {
   for (const operator of operators) {
     const operatorGeneralInfo = await getOperator(operator);
     const color = operatorGeneralInfo[0].color;
-    addSourcesAndLayers(map, operator, color);
+    updatePositions(map, operator, color);
+    setInterval(() => {
+      updatePositions(map, operator, color);
+      console.log("Updated Positions");
+    }, 15000);
   }
 });
 
@@ -63,6 +67,11 @@ map.on("mouseleave", operators, (e) => {
   }
 });
 
+// List of Data Sources added to map
+// Used to compare with visible sources
+// If not visible, remove source
+const addedSources = [];
+
 /**
  * Create and add vehicle position and route layers for
  * specified operator.
@@ -70,33 +79,60 @@ map.on("mouseleave", operators, (e) => {
  * @param {string} operator - operator's code name
  * @param {string} color - hex color value
  */
-async function addSourcesAndLayers(map, operator, color) {
+async function updatePositions(map, operator, color) {
   const positions = await getPositions(operator);
-  map.addSource(operator, {
-    type: "geojson",
-    data: {
-      type: "FeatureCollection",
-      features: positions,
-    },
-    generateId: true,
-  });
+  const points = {
+    type: "FeatureCollection",
+    features: positions,
+  };
+  // Remove source if all vehicle's are inactive
+  if (!positions.length && addedSources.includes(operator)) {
+    map.removeSource(operator);
+    console.log(`Removed ${operator} source`);
+  }
+  // Update source if vehicles are still active
+  else if (addedSources.includes(operator)) {
+    map.getSource(operator).setData(points);
+    console.log("Updated Sources");
+  }
+  // Only add source if operator has positions
+  else if (positions.length) {
+    map.addSource(operator, {
+      type: "geojson",
+      data: {
+        type: "FeatureCollection",
+        features: positions,
+      },
+      generateId: true,
+    });
 
-  map.addLayer({
-    id: operator,
-    type: "circle",
-    source: operator,
-    paint: {
-      "circle-color": color,
-      "circle-radius": 6,
-      "circle-stroke-width": 1,
-      "circle-stroke-color": "#000000",
-    },
-  });
+    addedSources.push(operator);
+
+    map.addLayer({
+      id: operator,
+      type: "circle",
+      source: operator,
+      paint: {
+        "circle-color": color,
+        "circle-radius": 6,
+        "circle-stroke-width": 1,
+        "circle-stroke-color": "#000000",
+      },
+    });
+  }
 
   for (const position of positions) {
     const tripId = position.properties.tripId;
     const shapeId = position.properties.shapeId;
-    if (shapeId) {
+
+    // Remove source if all vehicle's are inactive
+    const sourceName = `${operator}-${tripId}`;
+    if (!positions.length && addedSources.includes(sourceName)) {
+      map.removeSource(sourceName);
+    }
+
+    // Only add trip if shape exists and source doesn't
+    else if (shapeId && !addedSources.includes(sourceName)) {
       const coordinates = await getShapeCoordinates(operator, shapeId);
       if (coordinates) {
         map.addSource(`${operator}-${tripId}`, {
@@ -115,45 +151,19 @@ async function addSourcesAndLayers(map, operator, color) {
           },
           paint: {
             "line-color": color,
-            // "line-width": 2,
             "line-width": [
               "case",
               ["boolean", ["feature-state", "hover"], false],
               3,
-              2,
-            ],
-            "line-opacity": [
-              "case",
-              ["boolean", ["feature-state", "hover"], false],
-              1,
-              0.1,
+              0.5,
             ],
           },
         });
+        addedSources.push(`${operator}-${tripId}`);
       }
     }
   }
 }
-
-/**
- * Update vehicle positions on map
- * @param {string} operator - operator's code name
- */
-async function updatePositions(operator) {
-  const positions = await getPositions(operator);
-  const points = {
-    type: "FeatureCollection",
-    features: positions,
-  };
-  map.getSource(operator).setData(points);
-}
-
-setInterval(() => {
-  for (const operator of operators) {
-    updatePositions(operator);
-  }
-  console.log("Updated Positions");
-}, 30000);
 
 /**
  * Retrive current vehicle positions and update to GeoJSON
@@ -161,31 +171,36 @@ setInterval(() => {
  * @returns {object} GeoJSON object of all vehicle positions
  */
 async function getPositions(operator) {
-  const response = await fetch(
-    `http://localhost:3000/positions?operator=${operator}`
-  );
-  const positions = await response.json();
-  const positionsGeoJSON = [];
-  for (const position of positions) {
-    const coordinates = [position.longitude, position.latitude];
-    positionsGeoJSON.push({
-      type: "Feature",
-      properties: {
-        operator: position.operator,
-        tripId: position.trip_id,
-        shapeId: position.shape_id,
-        coordinates: coordinates,
-        directionId: position.direction_id,
-        bearing: position.bearing,
-        speed: position.speed,
-      },
-      geometry: {
-        type: "Point",
-        coordinates: coordinates,
-      },
-    });
+  try {
+    const response = await fetch(
+      `http://localhost:3000/positions?operator=${operator}`
+    );
+
+    const positions = await response.json();
+    const positionsGeoJSON = [];
+    for (const position of positions) {
+      const coordinates = [position.longitude, position.latitude];
+      positionsGeoJSON.push({
+        type: "Feature",
+        properties: {
+          operator: position.operator,
+          tripId: position.trip_id,
+          shapeId: position.shape_id,
+          coordinates: coordinates,
+          directionId: position.direction_id,
+          bearing: position.bearing,
+          speed: position.speed,
+        },
+        geometry: {
+          type: "Point",
+          coordinates: coordinates,
+        },
+      });
+    }
+    return positionsGeoJSON;
+  } catch (error) {
+    console.log(error);
   }
-  return positionsGeoJSON;
 }
 
 /**
@@ -195,7 +210,6 @@ async function getPositions(operator) {
  */
 async function getShapeCoordinates(operator, shapeId) {
   const response = await fetch(
-    // `http://localhost:3000/shapes?operator=${operator}&tripId=${tripId}`
     `http://localhost:3000/shapes?operator=${operator}&shapeId=${shapeId}`
   );
   const data = await response.json();

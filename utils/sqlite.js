@@ -19,6 +19,7 @@ function connectDB() {
 }
 
 const db = connectDB();
+// db.configure("busyTimeout", 15000);
 
 function createOperatorsTable(db) {
   db.run(`
@@ -352,7 +353,7 @@ async function updateAllOperators() {
   console.log("Updated All");
 }
 
-updateAllOperators();
+// updateAllOperators()
 //
 // db.all('pragma table_info(shapes)', (error, data) => {
 //   if (error) {
