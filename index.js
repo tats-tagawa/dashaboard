@@ -93,7 +93,6 @@ async function updatePositions(map, operator, color) {
   // Update source if vehicles are still active
   else if (addedSources.includes(operator)) {
     map.getSource(operator).setData(points);
-    console.log("Updated Sources");
   }
   // Only add source if operator has positions
   else if (positions.length) {

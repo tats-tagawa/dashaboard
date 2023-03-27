@@ -27,6 +27,7 @@ app.listen(port, () => {
 });
 
 const db = connectDB();
+db.run('PRAGMA journddal_mode = WAL');
 
 cron.schedule("*/1 * * * *", async () => {
   await updatePositions(db);
@@ -34,13 +35,21 @@ cron.schedule("*/1 * * * *", async () => {
 });
 
 app.get("/positions", async (req, res) => {
-  const positions = await getPositions(db, req.query.operator);
-  res.send(positions);
+  try {
+    const positions = await getPositions(db, req.query.operator);
+    res.send(positions);
+  } catch (error) {
+    console.log(error);
+  }
 });
 
 app.get("/shapes", async (req, res) => {
   try {
-    const tripCoordinates = await getShapeCoordinates(db, req.query.operator, req.query.shapeId);
+    const tripCoordinates = await getShapeCoordinates(
+      db,
+      req.query.operator,
+      req.query.shapeId
+    );
     res.send(tripCoordinates);
   } catch (error) {
     console.error(error);
