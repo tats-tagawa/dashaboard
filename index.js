@@ -40,13 +40,15 @@ map.on("mouseenter", operators, (e) => {
   const properties = e.features[0].properties;
   const operator = properties.operator;
   const coordinates = [e.lngLat.lng, e.lngLat.lat];
+  const vehicleId = properties.vehicleId;
+  const routeId = properties.routeId;
   const tripId = properties.tripId;
   const shapeId = properties.shapeId;
   popup
     .setLngLat(coordinates)
     .setHTML(
-      `<strong>Trip ID: ${tripId}</strong><br>
-      <strong>Shape ID: ${shapeId}</strong><br>
+      `<strong>Route: ${routeId}</strong><br>
+      <strong>Vehicle: ${vehicleId}</strong><br>
       <strong>Operator: ${operator}</strong>`
     )
     .addTo(map);
@@ -85,7 +87,7 @@ async function updatePositions(map, operator, color) {
     type: "FeatureCollection",
     features: positions,
   };
-  // Remove source if all vehicle's are inactive
+  // Remove operator source if all vehicle's are inactive
   if (!positions.length && addedSources.includes(operator)) {
     map.removeSource(operator);
     console.log(`Removed ${operator} source`);
@@ -127,38 +129,44 @@ async function updatePositions(map, operator, color) {
     // Remove source if all vehicle's are inactive
     const sourceName = `${operator}-${tripId}`;
     if (!positions.length && addedSources.includes(sourceName)) {
+      console.log(`Removed ${sourceName} source`);
       map.removeSource(sourceName);
     }
 
     // Only add trip if shape exists and source doesn't
     else if (shapeId && !addedSources.includes(sourceName)) {
-      const coordinates = await getShapeCoordinates(operator, shapeId);
-      if (coordinates) {
-        map.addSource(`${operator}-${tripId}`, {
-          type: "geojson",
-          data: coordinates,
-          generateId: true,
-        });
+      try {
+        const coordinates = await getShapeCoordinates(operator, shapeId);
+        if (coordinates) {
+          map.addSource(`${operator}-${tripId}`, {
+            type: "geojson",
+            data: coordinates,
+            generateId: true,
+          });
 
-        map.addLayer({
-          id: `${operator}-${tripId}`,
-          type: "line",
-          source: `${operator}-${tripId}`,
-          layout: {
-            "line-join": "round",
-            "line-cap": "round",
-          },
-          paint: {
-            "line-color": color,
-            "line-width": [
-              "case",
-              ["boolean", ["feature-state", "hover"], false],
-              3,
-              0.5,
-            ],
-          },
-        });
-        addedSources.push(`${operator}-${tripId}`);
+          map.addLayer({
+            id: `${operator}-${tripId}`,
+            type: "line",
+            source: `${operator}-${tripId}`,
+            layout: {
+              "line-join": "round",
+              "line-cap": "round",
+            },
+            paint: {
+              "line-color": color,
+              "line-width": [
+                "case",
+                ["boolean", ["feature-state", "hover"], false],
+                3,
+                0.5,
+              ],
+            },
+          });
+          addedSources.push(`${operator}-${tripId}`);
+        }
+      } catch (error) {
+        console.log(`${operator}-${tripId}`);
+        console.error(error);
       }
     }
   }
@@ -185,6 +193,8 @@ async function getPositions(operator) {
           operator: position.operator,
           tripId: position.trip_id,
           shapeId: position.shape_id,
+          routeId: position.route_id,
+          vehicleId: position.vehicle_id,
           coordinates: coordinates,
           directionId: position.direction_id,
           bearing: position.bearing,

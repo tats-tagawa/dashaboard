@@ -19,6 +19,7 @@ function connectDB() {
 }
 
 const db = connectDB();
+db.run('PRAGMA journddal_mode = WAL');
 // db.configure("busyTimeout", 15000);
 
 function createOperatorsTable(db) {
