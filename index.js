@@ -8,7 +8,8 @@ const map = new mapboxgl.Map({
 });
 
 // Operators to load by default
-const operators = ["SA", "CT", "CC", "SM"];
+// const operators = ["SA", "CT", "CC", "SM"];
+const operators = ["CT"];
 // const operators = ["SC"];
 
 map.on("load", async () => {
@@ -227,6 +228,71 @@ async function getShapeCoordinates(operator, shapeId) {
   } else {
     return false;
   }
+}
+
+async function addShapes(operator) {
+  const positions = await getPositions(operator);
+  const shapeIds = positions.reduce((acc, shape, index) => {
+    acc.push(shape.properties.shapeId);
+    return acc;
+  }, []);
+  const shapesFeatures = [];
+  console.log(shapeIds)
+  const shapes = await getAllShapeCoordinates(operator, shapeIds);
+  for (const [key, value] of Object.entries(shapes)) {
+    shapesFeatures.push(
+      turf.lineString(value, {
+        operator: operator,
+        shapeId: key,
+      })
+    );
+  }
+
+  map.addSource(`${operator}-shapes`, {
+    type: "geojson",
+    data: {
+      type: "FeatureCollection",
+      features: shapesFeatures,
+    },
+    generateId: true,
+  });
+
+  map.addLayer({
+    id: `${operator}`,
+    type: "line",
+    source: `${operator}-shapes`,
+    layout: {
+      "line-join": "round",
+      "line-cap": "round",
+    },
+    paint: {
+      "line-width": [
+        "case",
+        ["boolean", ["feature-state", "hover"], false],
+        3,
+        0.5,
+      ],
+    },
+  });
+
+  console.log(shapesFeatures);
+}
+addShapes("CC");
+
+async function getAllShapeCoordinates(operator, shapeIds) {
+  const options = {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      operator: operator,
+      shapeIds: shapeIds,
+    }),
+  };
+  const response = await fetch("http://localhost:3000/shapes", options);
+  const data = await response.json();
+  return data;
 }
 
 /**

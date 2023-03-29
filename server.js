@@ -13,6 +13,7 @@ import {
   updatePositions,
   getTripShapeId,
   getShapeCoordinates,
+  getAllShapeCoordinates,
   updateOperatorDataTable,
 } from "./utils/sqlite.js";
 
@@ -27,7 +28,7 @@ app.listen(port, () => {
 });
 
 const db = connectDB();
-db.run('PRAGMA journddal_mode = WAL');
+db.run("PRAGMA journddal_mode = WAL");
 
 cron.schedule("*/1 * * * *", async () => {
   await updatePositions(db);
@@ -65,3 +66,11 @@ app.get("/operator", async (req, res) => {
   const data = await getOperator(db, req.query.operator);
   res.send(data);
 });
+
+app.post('/shapes', async (req, res) => {
+  const operator = req.body.operator
+  const shapeIds = req.body.shapeIds;
+  const data = await getAllShapeCoordinates(db, operator, shapeIds)
+  console.log(data);
+  res.send(data)
+})

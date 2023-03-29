@@ -18,8 +18,7 @@ function connectDB() {
   return db;
 }
 
-const db = connectDB();
-db.run('PRAGMA journddal_mode = WAL');
+// db.run("PRAGMA journddal_mode = WAL");
 // db.configure("busyTimeout", 15000);
 
 function createOperatorsTable(db) {
@@ -204,11 +203,11 @@ async function updateOperatorDataTable(db, operator) {
   const operatorData = await getOperatorGTFSDataFeed(operator);
   for await (const data of operatorData) {
     if (data[0] === "shapes") {
-      console.log(`Updating ${operator} Shapes`)
+      console.log(`Updating ${operator} Shapes`);
       const status = await updateOperatorShapes(db, data[2], operator);
       console.log(status);
     } else if (data[0] === "trips") {
-      console.log(`Updating ${operator} Trips`)
+      console.log(`Updating ${operator} Trips`);
       const status = await updateOperatorTrips(db, data[2], operator);
       console.log(status);
     } else {
@@ -335,13 +334,27 @@ async function getShapeCoordinates(db, operator, shapeId) {
   });
 }
 
-async function getAllShapeCoordinates(db, operator) {
-  const shapeCoordinates = {};
-  const shapeIds = await getShapeIds(db, operator);
-  for (const shapeId of shapeIds) {
-    shapeCoordinates[shapeId] = await getShapeCoordinates(db, shapeId);
-  }
-  return shapeCoordinates;
+async function getAllShapeCoordinates(db, operator, shapeIds) {
+  return new Promise((resolve, reject) => {
+    const shapeIdsProcessed = shapeIds.map(shapeId => `'${shapeId}'`);
+    const query = `SELECT * FROM shapes WHERE operator='${operator}' AND shape_id IN (${shapeIdsProcessed.join()}) ORDER BY shape_id, shape_pt_sequence`
+    db.all(query, (error, data) => {
+      if (error) reject(error);
+
+      // acc: object with shape coordinates {shapeId: coordinates}
+      const shapes = data.reduce(
+        (acc, { shape_id, shape_pt_lon, shape_pt_lat }) => {
+          if (!acc[shape_id]) {
+            acc[shape_id] = [];
+          }
+          acc[shape_id].push([shape_pt_lon, shape_pt_lat]);
+          return acc;
+        },
+        {}
+      );
+      resolve(shapes);
+    });
+  });
 }
 
 async function updateAllOperators() {
@@ -372,5 +385,6 @@ export {
   updatePositions,
   getTripShapeId,
   getShapeCoordinates,
+  getAllShapeCoordinates,
   updateOperatorDataTable,
 };
