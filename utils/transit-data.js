@@ -25,7 +25,7 @@ async function getOperatorsTransitData() {
 function getOperatorColors() {
   return {
     CC: "#F5BC5B",
-    AC: "#000000",
+    AC: "#2D6955",
     CE: "#000000",
     CM: "#000000",
     CT: "#E31837",
@@ -42,7 +42,7 @@ function getOperatorColors() {
     SA: "#013220",
     SB: "#000000",
     SC: "#4CB4E7",
-    SF: "#000000",
+    SF: "#B5333A",
     SI: "#000000",
     SM: "#215196",
     SO: "#000000",

@@ -54,6 +54,8 @@ async function updateOperators(db) {
   console.log("Updated Operators List");
 }
 
+// updateOperators(connectDB())
+
 function getOperators(db) {
   return new Promise((resolve, reject) => {
     let query;

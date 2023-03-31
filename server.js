@@ -71,6 +71,5 @@ app.post('/shapes', async (req, res) => {
   const operator = req.body.operator
   const shapeIds = req.body.shapeIds;
   const data = await getAllShapeCoordinates(db, operator, shapeIds)
-  console.log(data);
   res.send(data)
 })
