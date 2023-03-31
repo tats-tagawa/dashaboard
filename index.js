@@ -8,14 +8,14 @@ const map = new mapboxgl.Map({
 });
 
 // Operators to load by default
-const operators = ["SC","SF","SM","CT","AC"];
+const operators = ["SC", "SF", "SM", "SA", "CT", "AC"];
 
 map.on("load", async () => {
   for (const operator of operators) {
     const operatorGeneralInfo = await getOperator(operator);
     const color = operatorGeneralInfo[0].color;
+    await addShapes(operator, color);
     updatePositions(map, operator, color);
-    addShapes(operator, color);
     setInterval(() => {
       updatePositions(map, operator, color);
       console.log("Updated Positions");
@@ -42,6 +42,7 @@ map.on("mouseenter", operators, (e) => {
   const operatorName = properties.operatorName;
   const vehicleId = properties.vehicleId;
   const routeId = properties.routeId;
+  const shapeId = properties.shapeId;
   const tripId = properties.tripId;
   const coordinates = [e.lngLat.lng, e.lngLat.lat];
   popup
@@ -148,9 +149,9 @@ async function getPositions(operator) {
     const response = await fetch(
       `http://localhost:3000/positions?operator=${operator}`
     );
-    
+
     const positions = await response.json();
-    const operatorGeneralInfo = await getOperator(operator);    
+    const operatorGeneralInfo = await getOperator(operator);
     const operatorName = operatorGeneralInfo[0].name;
     const positionsGeoJSON = [];
     for (const position of positions) {
@@ -198,61 +199,65 @@ async function getShapeCoordinates(operator, shapeId) {
   }
 }
 
-async function addShapes(operator, color) {
-  try {
-    const positions = await getPositions(operator);
-    const shapeIds = positions.reduce((acc, shape, index) => {
-      acc.push(shape.properties.shapeId);
-      return acc;
-    }, []);
-    const shapesFeatures = [];
-    const shapes = await getAllShapeCoordinates(operator, shapeIds);
-    for (const position of positions) {
-      const tripId = position.properties.tripId;
-      const shapeId = position.properties.shapeId;
-      const coordinates = shapes[shapeId];
-      const properties = {
-        operator: operator,
-        shapeId: shapeId,
-        tripId: tripId,
-      };
-      const options = {
-        id: `${operator}-${tripId}`,
-      };
-      shapesFeatures.push(turf.lineString(coordinates, properties, options));
+function addShapes(operator, color) {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const positions = await getPositions(operator);
+      const shapeIds = positions.reduce((acc, shape, index) => {
+        acc.push(shape.properties.shapeId);
+        return acc;
+      }, []);
+      const shapesFeatures = [];
+      const shapes = await getAllShapeCoordinates(operator, shapeIds);
+
+      for (const position of positions) {
+        const tripId = position.properties.tripId;
+        const shapeId = position.properties.shapeId;
+        const coordinates = shapes[shapeId];
+        if (!tripId || !shapeId) continue;
+        const properties = {
+          operator: operator,
+          shapeId: shapeId,
+          tripId: tripId,
+        };
+        const options = {
+          id: `${operator}-${tripId}`,
+        };
+        shapesFeatures.push(turf.lineString(coordinates, properties, options));
+      }
+      map.addSource(`${operator}-shapes`, {
+        type: "geojson",
+        data: {
+          type: "FeatureCollection",
+          features: shapesFeatures,
+        },
+        promoteId: "tripId",
+      });
+
+      map.addLayer({
+        id: `${operator}-shapes-layer`,
+        type: "line",
+        source: `${operator}-shapes`,
+        layout: {
+          "line-join": "round",
+          "line-cap": "round",
+        },
+        paint: {
+          "line-color": color,
+          "line-width": [
+            "case",
+            ["boolean", ["feature-state", "hover"], false],
+            3,
+            0.5,
+          ],
+        },
+      });
+      // console.log(shapesFeatures);
+    } catch (error) {
+      reject(error);
     }
-
-    map.addSource(`${operator}-shapes`, {
-      type: "geojson",
-      data: {
-        type: "FeatureCollection",
-        features: shapesFeatures,
-      },
-      promoteId: "tripId",
-    });
-
-    map.addLayer({
-      id: `${operator}-shapes-layer`,
-      type: "line",
-      source: `${operator}-shapes`,
-      layout: {
-        "line-join": "round",
-        "line-cap": "round",
-      },
-      paint: {
-        "line-color": color,
-        "line-width": [
-          "case",
-          ["boolean", ["feature-state", "hover"], false],
-          3,
-          0.5,
-        ],
-      },
-    });
-    // console.log(shapesFeatures);
-  } catch (error) {
-    console.error(error);
-  }
+    resolve("done");
+  });
 }
 
 async function getAllShapeCoordinates(operator, shapeIds) {
