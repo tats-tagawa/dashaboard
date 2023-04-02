@@ -1,20 +1,16 @@
 import express from "express";
-import axios from "axios";
 import cors from "cors";
 import * as dotenv from "dotenv";
 dotenv.config();
 import * as cron from "node-cron";
 import {
   connectDB,
-  updateOperators,
   getOperators,
   getOperator,
   getPositions,
   updatePositions,
-  getTripShapeId,
   getShapeCoordinates,
   getAllShapeCoordinates,
-  updateOperatorDataTable,
 } from "./utils/sqlite.js";
 
 const app = express();

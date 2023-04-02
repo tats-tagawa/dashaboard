@@ -14,10 +14,11 @@ map.on("load", async () => {
   for (const operator of operators) {
     const operatorGeneralInfo = await getOperator(operator);
     const color = operatorGeneralInfo[0].color;
-    await addShapes(operator, color);
-    updatePositions(map, operator, color);
-    setInterval(() => {
-      updatePositions(map, operator, color);
+    await updateShapes(operator, color);
+    await updatePositions(operator, color);
+    setInterval(async () => {
+      await updateShapes(operator, color)
+      await updatePositions(operator, color);
       console.log("Updated Positions");
     }, 60000);
   }
@@ -96,31 +97,26 @@ const addedSources = [];
  * @param {string} operator - operator's code name
  * @param {string} color - hex color value
  */
-async function updatePositions(map, operator, color) {
+async function updatePositions(operator, color) {
   const positions = await getPositions(operator);
-  const points = {
+  const positionsFeatureCollection = {
     type: "FeatureCollection",
     features: positions,
   };
   // Remove operator source if all vehicle's are inactive
-  if (!positions.length && addedSources.includes(operator)) {
-    console.log(positions)
+  if (!positions.length && map.getSource(operator)) {
     map.removeSource(operator);
-    map.removeSource(`${operator}-shapes`);
     console.log(`Removed ${operator} source`);
   }
   // Update source if vehicles are still active
-  else if (addedSources.includes(operator)) {
-    map.getSource(operator).setData(points);
+  else if (map.getSource(operator)) {
+    map.getSource(operator).setData(positionsFeatureCollection);
   }
   // Only add source if operator has positions
   else if (positions.length) {
     map.addSource(operator, {
       type: "geojson",
-      data: {
-        type: "FeatureCollection",
-        features: positions,
-      },
+      data: positionsFeatureCollection,
       generateId: true,
     });
 
@@ -200,38 +196,49 @@ async function getShapeCoordinates(operator, shapeId) {
   }
 }
 
-function addShapes(operator, color) {
-  return new Promise(async (resolve, reject) => {
-    try {
-      const positions = await getPositions(operator);
-      const shapeIds = positions.reduce((acc, shape, index) => {
-        acc.push(shape.properties.shapeId);
-        return acc;
-      }, []);
-      const shapesFeatures = [];
-      const shapes = await getAllShapeCoordinates(operator, shapeIds);
+async function updateShapes(operator, color) {
+  try {
+    const positions = await getPositions(operator);
+    const shapeIds = positions.reduce((acc, shape) => {
+      acc.push(shape.properties.shapeId);
+      return acc;
+    }, []);
+    const shapesFeatureCollection = {
+      type: "FeatureCollection",
+      features: []
+    };
+    const shapes = await getAllShapeCoordinates(operator, shapeIds);
 
-      for (const position of positions) {
-        const tripId = position.properties.tripId;
-        const shapeId = position.properties.shapeId;
-        const coordinates = shapes[shapeId];
-        if (!tripId || !shapeId) continue;
-        const properties = {
-          operator: operator,
-          shapeId: shapeId,
-          tripId: tripId,
-        };
-        const options = {
-          id: `${operator}-${tripId}`,
-        };
-        shapesFeatures.push(turf.lineString(coordinates, properties, options));
-      }
+    for (const position of positions) {
+      const tripId = position.properties.tripId;
+      const shapeId = position.properties.shapeId;
+      const coordinates = shapes[shapeId];
+      if (!tripId || !shapeId) continue;
+      const properties = {
+        operator: operator,
+        shapeId: shapeId,
+        tripId: tripId,
+      };
+      const options = {
+        id: `${operator}-${tripId}`,
+      };
+      shapesFeatureCollection.features.push(turf.lineString(coordinates, properties, options));
+    }
+    console.log(Object.keys(shapes).length)
+    // remove shapes if all operator vehicles are inactive
+    if (!Object.keys(shapes).length && map.getSource(`${operator}-shapes`)) {
+      map.removeSource(`${operator}-shapes`);
+      console.log(`Removed ${operator}-shapes source`);
+    }
+    // Update shapes if vehicles are still active
+    else if (map.getSource(`${operator}-shapes`)) {
+      map.getSource(`${operator}-shapes`).setData(shapesFeatureCollection);
+    }
+    // Only add shapes if operator has positions
+    else if (shapesFeatureCollection.features.length) {
       map.addSource(`${operator}-shapes`, {
         type: "geojson",
-        data: {
-          type: "FeatureCollection",
-          features: shapesFeatures,
-        },
+        data: shapesFeatureCollection,
         promoteId: "tripId",
       });
 
@@ -253,12 +260,11 @@ function addShapes(operator, color) {
           ],
         },
       });
-      // console.log(shapesFeatures);
-    } catch (error) {
-      reject(error);
     }
-    resolve("done");
-  });
+    // console.log(shapesFeatures);
+  } catch (error) {
+    console.log(error);
+  }
 }
 
 async function getAllShapeCoordinates(operator, shapeIds) {
@@ -293,11 +299,9 @@ async function getOperators() {
  * @returns {object}
  */
 async function getOperator(operator) {
-  return new Promise(async (resolve, reject) => {
-    const response = await fetch(
-      `http://localhost:3000/operator?operator=${operator}`
-    );
-    const data = await response.json();
-    resolve(data);
-  });
+  const response = await fetch(
+    `http://localhost:3000/operator?operator=${operator}`
+  );
+  const data = await response.json();
+  return data;
 }
