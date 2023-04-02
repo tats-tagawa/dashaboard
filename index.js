@@ -224,7 +224,6 @@ async function updateShapes(operator, color) {
       };
       shapesFeatureCollection.features.push(turf.lineString(coordinates, properties, options));
     }
-    console.log(Object.keys(shapes).length)
     // remove shapes if all operator vehicles are inactive
     if (!Object.keys(shapes).length && map.getSource(`${operator}-shapes`)) {
       map.removeSource(`${operator}-shapes`);
