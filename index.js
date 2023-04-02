@@ -19,7 +19,7 @@ map.on("load", async () => {
     setInterval(() => {
       updatePositions(map, operator, color);
       console.log("Updated Positions");
-    }, 15000);
+    }, 60000);
   }
 });
 
@@ -104,6 +104,7 @@ async function updatePositions(map, operator, color) {
   };
   // Remove operator source if all vehicle's are inactive
   if (!positions.length && addedSources.includes(operator)) {
+    console.log(positions)
     map.removeSource(operator);
     map.removeSource(`${operator}-shapes`);
     console.log(`Removed ${operator} source`);
