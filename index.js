@@ -14,7 +14,7 @@ map.on("load", async () => {
   for (const operator of operators) {
     const operatorGeneralInfo = await getOperator(operator);
     const color = operatorGeneralInfo[0].color;
-    await addShapes(operator, color);
+    await createShapes(operator, color);
     updatePositions(map, operator, color);
     setInterval(() => {
       updatePositions(map, operator, color);
@@ -104,7 +104,7 @@ async function updatePositions(map, operator, color) {
   };
   // Remove operator source if all vehicle's are inactive
   if (!positions.length && addedSources.includes(operator)) {
-    console.log(positions)
+    console.log(positions);
     map.removeSource(operator);
     map.removeSource(`${operator}-shapes`);
     console.log(`Removed ${operator} source`);
@@ -200,8 +200,7 @@ async function getShapeCoordinates(operator, shapeId) {
   }
 }
 
-function addShapes(operator, color) {
-  return new Promise(async (resolve, reject) => {
+async function createShapes(operator, color) {
     try {
       const positions = await getPositions(operator);
       const shapeIds = positions.reduce((acc, shape, index) => {
@@ -255,10 +254,8 @@ function addShapes(operator, color) {
       });
       // console.log(shapesFeatures);
     } catch (error) {
-      reject(error);
+      console.log(error)
     }
-    resolve("done");
-  });
 }
 
 async function getAllShapeCoordinates(operator, shapeIds) {
@@ -293,11 +290,9 @@ async function getOperators() {
  * @returns {object}
  */
 async function getOperator(operator) {
-  return new Promise(async (resolve, reject) => {
     const response = await fetch(
       `http://localhost:3000/operator?operator=${operator}`
     );
     const data = await response.json();
-    resolve(data);
-  });
+    return data
 }

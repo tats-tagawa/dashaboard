@@ -4,3 +4,4 @@ GTFSDataFeeds
 .DS_Store
 *.db
 *.db-journal
+.eslintrc.json

@@ -45,7 +45,6 @@ async function updateOperators(db) {
         (error) => {
           if (error) {
             console.error(error.message);
-          } else {
           }
         }
       );
