@@ -8,11 +8,12 @@ const map = new mapboxgl.Map({
 });
 
 // Operators to load by default
-const operators = ["SC", "SF", "SM", "SA", "CT", "AC"];
+const selectedOperators = ["CT"];
+const allOperators = ["SC", "SF", "SM", "SA", "CT", "AC"];
 
 map.on("load", async () => {
-  createMenu();
-  for (const operator of operators) {
+  await createSelectionForm();
+  for (const operator of selectedOperators) {
     const operatorGeneralInfo = await getOperator(operator);
     const color = operatorGeneralInfo[0].color;
     await updateShapes(operator, color);
@@ -37,7 +38,7 @@ let hoverSource = null;
  * Show vehicle information markers and highlight
  * routes when vehicle positions are hovered over.
  */
-map.on("mouseenter", operators, (e) => {
+map.on("mouseenter", selectedOperators, (e) => {
   map.getCanvas().style.cursor = "pointer";
   const properties = e.features[0].properties;
   const operator = properties.operator;
@@ -70,7 +71,7 @@ map.on("mouseenter", operators, (e) => {
   }
 });
 
-map.on("mouseleave", operators, (e) => {
+map.on("mouseleave", selectedOperators, (e) => {
   map.getCanvas().style.cursor = "";
   popup.remove();
   const [operator, tripId] = hoverSource;
@@ -105,17 +106,17 @@ async function updatePositions(operator, color) {
     features: positions,
   };
   // Remove operator source if all vehicle's are inactive
-  if (!positions.length && map.getSource(operator)) {
-    map.removeSource(operator);
+  if (!positions.length && map.getSource(`${operator}-positions`)) {
+    map.removeSource(`${operator}-positions`);
     console.log(`Removed ${operator} source`);
   }
   // Update source if vehicles are still active
-  else if (map.getSource(operator)) {
-    map.getSource(operator).setData(positionsFeatureCollection);
+  else if (map.getSource(`${operator}-positions`)) {
+    map.getSource(`${operator}-positions`).setData(positionsFeatureCollection);
   }
   // Only add source if operator has positions
   else if (positions.length) {
-    map.addSource(operator, {
+    map.addSource(`${operator}-positions`, {
       type: "geojson",
       data: positionsFeatureCollection,
       generateId: true,
@@ -124,9 +125,9 @@ async function updatePositions(operator, color) {
     addedSources.push(operator);
 
     map.addLayer({
-      id: operator,
+      id: `${operator}-positions-layer`,
       type: "circle",
-      source: operator,
+      source: `${operator}-positions`,
       paint: {
         "circle-color": color,
         "circle-radius": 6,
@@ -308,21 +309,49 @@ async function getOperator(operator) {
   return data;
 }
 
-function createMenu() {
-  const selection = document.getElementById("selection");
+async function createSelectionForm() {
+  const selection = document.getElementById("selections");
   const form = document.createElement("form");
   selection.appendChild(form);
-  const sorted = operators.sort();
+  const allOperatorsSorted = allOperators.sort();
 
-  for (const operator of sorted) {
+  for (const operator of allOperatorsSorted) {
     const label = document.createElement("label");
     const checkbox = document.createElement("input");
     checkbox.type = "checkbox";
     checkbox.value = operator;
-    form.appendChild(checkbox);
-    form.appendChild(document.createTextNode(operator));
+    if (operator === "CT") checkbox.checked = true;
+    label.appendChild(checkbox);
+    label.appendChild(document.createTextNode(operator));
     form.appendChild(label);
     const br = document.createElement("br");
     form.appendChild(br);
+
+    const operatorGeneralInfo = await getOperator(operator);
+    const color = operatorGeneralInfo[0].color;
+    label.addEventListener("change", async (e) => {
+      const checked = e.target.checked;
+      const op = e.target.value;
+      if (checked) {
+        selectedOperators.push(op);
+        checkbox.disabled = true;
+        await updateShapes(op, color);
+        await updatePositions(op, color);
+        checkbox.disabled = false;
+      }
+      if (!checked) {
+        const index = selectedOperators.indexOf(op);
+        if (index !== -1) {
+          selectedOperators.splice(index, 1);
+        }
+
+        if (map.getSource(`${op}-shapes`) && map.getSource(`${op}-positions`)) {
+          map.removeLayer(`${op}-shapes-layer`);
+          map.removeSource(`${op}-shapes`);
+          map.removeLayer(`${op}-positions-layer`);
+          map.removeSource(`${op}-positions`);
+        }
+      }
+    });
   }
 }
