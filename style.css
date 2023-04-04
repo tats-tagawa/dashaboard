@@ -9,6 +9,7 @@ body {
   border-radius: 5px;
   box-shadow: 1px 1px 0px #9f9f9f;
   padding: 1rem;
+  margin: 1rem;
   position: fixed;
   top: 1em;
   right: 1em;

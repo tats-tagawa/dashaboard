@@ -11,13 +11,14 @@ const map = new mapboxgl.Map({
 const operators = ["SC", "SF", "SM", "SA", "CT", "AC"];
 
 map.on("load", async () => {
+  createMenu();
   for (const operator of operators) {
     const operatorGeneralInfo = await getOperator(operator);
     const color = operatorGeneralInfo[0].color;
     await updateShapes(operator, color);
     await updatePositions(operator, color);
     setInterval(async () => {
-      await updateShapes(operator, color)
+      await updateShapes(operator, color);
       await updatePositions(operator, color);
       console.log("Updated Positions");
     }, 60000);
@@ -205,7 +206,7 @@ async function updateShapes(operator, color) {
     }, []);
     const shapesFeatureCollection = {
       type: "FeatureCollection",
-      features: []
+      features: [],
     };
     const shapes = await getAllShapeCoordinates(operator, shapeIds);
 
@@ -222,7 +223,9 @@ async function updateShapes(operator, color) {
       const options = {
         id: `${operator}-${tripId}`,
       };
-      shapesFeatureCollection.features.push(turf.lineString(coordinates, properties, options));
+      shapesFeatureCollection.features.push(
+        turf.lineString(coordinates, properties, options)
+      );
     }
     // remove shapes if all operator vehicles are inactive
     if (!Object.keys(shapes).length && map.getSource(`${operator}-shapes`)) {
@@ -303,4 +306,23 @@ async function getOperator(operator) {
   );
   const data = await response.json();
   return data;
+}
+
+function createMenu() {
+  const selection = document.getElementById("selection");
+  const form = document.createElement("form");
+  selection.appendChild(form);
+  const sorted = operators.sort();
+
+  for (const operator of sorted) {
+    const label = document.createElement("label");
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.value = operator;
+    form.appendChild(checkbox);
+    form.appendChild(document.createTextNode(operator));
+    form.appendChild(label);
+    const br = document.createElement("br");
+    form.appendChild(br);
+  }
 }
