@@ -8,87 +8,29 @@ const map = new mapboxgl.Map({
 });
 
 // Operators to load by default
-const operators = ["SC", "SF", "SM", "SA", "CT", "AC"];
+const selectedOperators = [];
+const allOperators = ["SC", "SF", "SM", "SA", "CT", "AC", "CC"];
 
-map.on("load", async () => {
-  for (const operator of operators) {
-    const operatorGeneralInfo = await getOperator(operator);
-    const color = operatorGeneralInfo[0].color;
-    await updateShapes(operator, color);
-    await updatePositions(operator, color);
-    setInterval(async () => {
-      await updateShapes(operator, color)
-      await updatePositions(operator, color);
-      console.log("Updated Positions");
-    }, 60000);
-  }
-});
-
-const popup = new mapboxgl.Popup({
-  closeButton: false,
-  closeOnClick: false,
-});
+// store setIntervals for all operators
+let intervals = {}
 
 // saves hover state of vehicle positions
 let hoverSource = null;
-
-/**
- * Show vehicle information markers and highlight
- * routes when vehicle positions are hovered over.
- */
-map.on("mouseenter", operators, (e) => {
-  map.getCanvas().style.cursor = "pointer";
-  const properties = e.features[0].properties;
-  const operator = properties.operator;
-  const operatorName = properties.operatorName;
-  const vehicleId = properties.vehicleId;
-  const routeId = properties.routeId;
-  const shapeId = properties.shapeId;
-  const tripId = properties.tripId;
-  const coordinates = [e.lngLat.lng, e.lngLat.lat];
-  popup
-    .setLngLat(coordinates)
-    .setHTML(
-      `<strong>Route: ${routeId}</strong><br>
-    <strong>Vehicle: ${vehicleId}</strong><br>
-    <strong>Operator: ${operatorName}</strong>`
-    )
-    .addTo(map);
-
-  if (e.features.length > 0) {
-    map.setFeatureState(
-      {
-        source: `${operator}-shapes`,
-        id: `${tripId}`,
-      },
-      {
-        hover: true,
-      }
-    );
-    hoverSource = [operator, tripId];
-  }
-});
-
-map.on("mouseleave", operators, (e) => {
-  map.getCanvas().style.cursor = "";
-  popup.remove();
-  const [operator, tripId] = hoverSource;
-  if (hoverSource !== null) {
-    map.setFeatureState(
-      {
-        source: `${operator}-shapes`,
-        id: tripId,
-      },
-      { hover: false }
-    );
-  }
-  hoverSource = null;
-});
 
 // List of Data Sources added to map
 // Used to compare with visible sources
 // If not visible, remove source
 const addedSources = [];
+
+// popup bubble config
+const popup = new mapboxgl.Popup({
+  closeButton: false,
+  closeOnClick: false,
+});
+
+map.on("load", async () => {
+  await createMenu();
+});
 
 /**
  * Create and add vehicle position and route layers for
@@ -104,17 +46,17 @@ async function updatePositions(operator, color) {
     features: positions,
   };
   // Remove operator source if all vehicle's are inactive
-  if (!positions.length && map.getSource(operator)) {
-    map.removeSource(operator);
+  if (!positions.length && map.getSource(`${operator}-positions`)) {
+    map.removeSource(`${operator}-positions`);
     console.log(`Removed ${operator} source`);
   }
   // Update source if vehicles are still active
-  else if (map.getSource(operator)) {
-    map.getSource(operator).setData(positionsFeatureCollection);
+  else if (map.getSource(`${operator}-positions`)) {
+    map.getSource(`${operator}-positions`).setData(positionsFeatureCollection);
   }
   // Only add source if operator has positions
   else if (positions.length) {
-    map.addSource(operator, {
+    map.addSource(`${operator}-positions`, {
       type: "geojson",
       data: positionsFeatureCollection,
       generateId: true,
@@ -123,9 +65,9 @@ async function updatePositions(operator, color) {
     addedSources.push(operator);
 
     map.addLayer({
-      id: operator,
+      id: `${operator}-positions-layer`,
       type: "circle",
-      source: operator,
+      source: `${operator}-positions`,
       paint: {
         "circle-color": color,
         "circle-radius": 6,
@@ -205,7 +147,7 @@ async function updateShapes(operator, color) {
     }, []);
     const shapesFeatureCollection = {
       type: "FeatureCollection",
-      features: []
+      features: [],
     };
     const shapes = await getAllShapeCoordinates(operator, shapeIds);
 
@@ -222,7 +164,9 @@ async function updateShapes(operator, color) {
       const options = {
         id: `${operator}-${tripId}`,
       };
-      shapesFeatureCollection.features.push(turf.lineString(coordinates, properties, options));
+      shapesFeatureCollection.features.push(
+        turf.lineString(coordinates, properties, options)
+      );
     }
     // remove shapes if all operator vehicles are inactive
     if (!Object.keys(shapes).length && map.getSource(`${operator}-shapes`)) {
@@ -303,4 +247,110 @@ async function getOperator(operator) {
   );
   const data = await response.json();
   return data;
+}
+
+async function createMenu() {
+  const selection = document.getElementById("selections");
+  const form = document.createElement("form");
+  selection.appendChild(form);
+  const allOperatorsSorted = allOperators.sort();
+
+  for (const operator of allOperatorsSorted) {
+    const label = document.createElement("label");
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.value = operator;
+    label.appendChild(checkbox);
+    label.appendChild(document.createTextNode(operator));
+    form.appendChild(label);
+    const br = document.createElement("br");
+    form.appendChild(br);
+
+    const operatorGeneralInfo = await getOperator(operator);
+    const color = operatorGeneralInfo[0].color;
+    label.addEventListener("change", async (e) => {
+      const checked = e.target.checked;
+      const op = e.target.value;
+      if (checked) {
+        selectedOperators.push(op);
+        checkbox.disabled = true;
+        await updateShapes(op, color);
+        await updatePositions(op, color);
+        checkbox.disabled = false;
+        map.on("mouseenter", `${op}-positions-layer`, addHoverEvent)
+        map.on("mouseleave", `${op}-positions-layer`, removeHoverEvent)
+        intervals[op] = setInterval(async () => {
+          await updateShapes(operator, color);
+          await updatePositions(operator, color);
+          console.log("Updated Positions");
+        }, 60000);
+      }
+      if (!checked) {
+        const index = selectedOperators.indexOf(op);
+        if (index !== -1) {
+          selectedOperators.splice(index, 1);
+        }
+        map.off("mouseenter", `${op}-positions-layer`, addHoverEvent)
+        map.off("mouseleave", `${op}-positions-layer`, removeHoverEvent)
+        clearInterval(intervals[op]);
+        intervals[op] = null;
+
+        if (map.getSource(`${op}-shapes`) && map.getSource(`${op}-positions`)) {
+          map.removeLayer(`${op}-shapes-layer`);
+          map.removeSource(`${op}-shapes`);
+          map.removeLayer(`${op}-positions-layer`);
+          map.removeSource(`${op}-positions`);
+        }
+      }
+    });
+  }
+}
+
+function addHoverEvent(e) {
+  map.getCanvas().style.cursor = "pointer";
+  const properties = e.features[0].properties;
+  const operator = properties.operator;
+  const operatorName = properties.operatorName;
+  const vehicleId = properties.vehicleId;
+  const routeId = properties.routeId;
+  const shapeId = properties.shapeId;
+  const tripId = properties.tripId;
+  const coordinates = [e.lngLat.lng, e.lngLat.lat];
+  popup
+    .setLngLat(coordinates)
+    .setHTML(
+      `<strong>Route: ${routeId}</strong><br>
+    <strong>Vehicle: ${vehicleId}</strong><br>
+    <strong>Operator: ${operatorName}</strong>`
+    )
+    .addTo(map);
+
+  if (e.features.length > 0) {
+    map.setFeatureState(
+      {
+        source: `${operator}-shapes`,
+        id: `${tripId}`,
+      },
+      {
+        hover: true,
+      }
+    );
+    hoverSource = [operator, tripId];
+  }
+}
+
+function removeHoverEvent() {
+  map.getCanvas().style.cursor = "";
+  popup.remove();
+  const [operator, tripId] = hoverSource;
+  if (hoverSource !== null) {
+    map.setFeatureState(
+      {
+        source: `${operator}-shapes`,
+        id: tripId,
+      },
+      { hover: false }
+    );
+  }
+  hoverSource = null;
 }
