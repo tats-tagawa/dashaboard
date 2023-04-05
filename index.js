@@ -8,22 +8,21 @@ const map = new mapboxgl.Map({
 });
 
 // Operators to load by default
-const selectedOperators = ["CT"];
+const selectedOperators = [];
 const allOperators = ["SC", "SF", "SM", "SA", "CT", "AC"];
+
+// store setIntervals for all operators
+let intervals = {}
 
 map.on("load", async () => {
   await createSelectionForm();
-  for (const operator of selectedOperators) {
-    const operatorGeneralInfo = await getOperator(operator);
-    const color = operatorGeneralInfo[0].color;
-    await updateShapes(operator, color);
-    await updatePositions(operator, color);
-    setInterval(async () => {
-      await updateShapes(operator, color);
-      await updatePositions(operator, color);
-      console.log("Updated Positions");
-    }, 60000);
-  }
+  // for (const operator of selectedOperators) {
+  //   const operatorGeneralInfo = await getOperator(operator);
+  //   const color = operatorGeneralInfo[0].color;
+  //   await updateShapes(operator, color);
+  //   await updatePositions(operator, color);
+
+  // }
 });
 
 const popup = new mapboxgl.Popup({
@@ -320,7 +319,6 @@ async function createSelectionForm() {
     const checkbox = document.createElement("input");
     checkbox.type = "checkbox";
     checkbox.value = operator;
-    if (operator === "CT") checkbox.checked = true;
     label.appendChild(checkbox);
     label.appendChild(document.createTextNode(operator));
     form.appendChild(label);
@@ -338,12 +336,21 @@ async function createSelectionForm() {
         await updateShapes(op, color);
         await updatePositions(op, color);
         checkbox.disabled = false;
+        intervals[op] = setInterval(async () => {
+          await updateShapes(operator, color);
+          await updatePositions(operator, color);
+          console.log("Updated Positions");
+          console.log(op)
+        }, 30000);
       }
       if (!checked) {
         const index = selectedOperators.indexOf(op);
         if (index !== -1) {
           selectedOperators.splice(index, 1);
         }
+
+        clearInterval(intervals[op]);
+        intervals[op] = null;
 
         if (map.getSource(`${op}-shapes`) && map.getSource(`${op}-positions`)) {
           map.removeLayer(`${op}-shapes-layer`);
