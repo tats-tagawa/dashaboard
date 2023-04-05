@@ -9,87 +9,28 @@ const map = new mapboxgl.Map({
 
 // Operators to load by default
 const selectedOperators = [];
-const allOperators = ["SC", "SF", "SM", "SA", "CT", "AC"];
+const allOperators = ["SC", "SF", "SM", "SA", "CT", "AC", "CC"];
 
 // store setIntervals for all operators
 let intervals = {}
 
-map.on("load", async () => {
-  await createSelectionForm();
-  // for (const operator of selectedOperators) {
-  //   const operatorGeneralInfo = await getOperator(operator);
-  //   const color = operatorGeneralInfo[0].color;
-  //   await updateShapes(operator, color);
-  //   await updatePositions(operator, color);
-
-  // }
-});
-
-const popup = new mapboxgl.Popup({
-  closeButton: false,
-  closeOnClick: false,
-});
-
 // saves hover state of vehicle positions
 let hoverSource = null;
-
-/**
- * Show vehicle information markers and highlight
- * routes when vehicle positions are hovered over.
- */
-map.on("mouseenter", selectedOperators, (e) => {
-  map.getCanvas().style.cursor = "pointer";
-  const properties = e.features[0].properties;
-  const operator = properties.operator;
-  const operatorName = properties.operatorName;
-  const vehicleId = properties.vehicleId;
-  const routeId = properties.routeId;
-  const shapeId = properties.shapeId;
-  const tripId = properties.tripId;
-  const coordinates = [e.lngLat.lng, e.lngLat.lat];
-  popup
-    .setLngLat(coordinates)
-    .setHTML(
-      `<strong>Route: ${routeId}</strong><br>
-    <strong>Vehicle: ${vehicleId}</strong><br>
-    <strong>Operator: ${operatorName}</strong>`
-    )
-    .addTo(map);
-
-  if (e.features.length > 0) {
-    map.setFeatureState(
-      {
-        source: `${operator}-shapes`,
-        id: `${tripId}`,
-      },
-      {
-        hover: true,
-      }
-    );
-    hoverSource = [operator, tripId];
-  }
-});
-
-map.on("mouseleave", selectedOperators, (e) => {
-  map.getCanvas().style.cursor = "";
-  popup.remove();
-  const [operator, tripId] = hoverSource;
-  if (hoverSource !== null) {
-    map.setFeatureState(
-      {
-        source: `${operator}-shapes`,
-        id: tripId,
-      },
-      { hover: false }
-    );
-  }
-  hoverSource = null;
-});
 
 // List of Data Sources added to map
 // Used to compare with visible sources
 // If not visible, remove source
 const addedSources = [];
+
+// popup bubble config
+const popup = new mapboxgl.Popup({
+  closeButton: false,
+  closeOnClick: false,
+});
+
+map.on("load", async () => {
+  await createMenu();
+});
 
 /**
  * Create and add vehicle position and route layers for
@@ -308,7 +249,7 @@ async function getOperator(operator) {
   return data;
 }
 
-async function createSelectionForm() {
+async function createMenu() {
   const selection = document.getElementById("selections");
   const form = document.createElement("form");
   selection.appendChild(form);
@@ -336,19 +277,21 @@ async function createSelectionForm() {
         await updateShapes(op, color);
         await updatePositions(op, color);
         checkbox.disabled = false;
+        map.on("mouseenter", `${op}-positions-layer`, addHoverEvent)
+        map.on("mouseleave", `${op}-positions-layer`, removeHoverEvent)
         intervals[op] = setInterval(async () => {
           await updateShapes(operator, color);
           await updatePositions(operator, color);
           console.log("Updated Positions");
-          console.log(op)
-        }, 30000);
+        }, 60000);
       }
       if (!checked) {
         const index = selectedOperators.indexOf(op);
         if (index !== -1) {
           selectedOperators.splice(index, 1);
         }
-
+        map.off("mouseenter", `${op}-positions-layer`, addHoverEvent)
+        map.off("mouseleave", `${op}-positions-layer`, removeHoverEvent)
         clearInterval(intervals[op]);
         intervals[op] = null;
 
@@ -361,4 +304,53 @@ async function createSelectionForm() {
       }
     });
   }
+}
+
+function addHoverEvent(e) {
+  map.getCanvas().style.cursor = "pointer";
+  const properties = e.features[0].properties;
+  const operator = properties.operator;
+  const operatorName = properties.operatorName;
+  const vehicleId = properties.vehicleId;
+  const routeId = properties.routeId;
+  const shapeId = properties.shapeId;
+  const tripId = properties.tripId;
+  const coordinates = [e.lngLat.lng, e.lngLat.lat];
+  popup
+    .setLngLat(coordinates)
+    .setHTML(
+      `<strong>Route: ${routeId}</strong><br>
+    <strong>Vehicle: ${vehicleId}</strong><br>
+    <strong>Operator: ${operatorName}</strong>`
+    )
+    .addTo(map);
+
+  if (e.features.length > 0) {
+    map.setFeatureState(
+      {
+        source: `${operator}-shapes`,
+        id: `${tripId}`,
+      },
+      {
+        hover: true,
+      }
+    );
+    hoverSource = [operator, tripId];
+  }
+}
+
+function removeHoverEvent() {
+  map.getCanvas().style.cursor = "";
+  popup.remove();
+  const [operator, tripId] = hoverSource;
+  if (hoverSource !== null) {
+    map.setFeatureState(
+      {
+        source: `${operator}-shapes`,
+        id: tripId,
+      },
+      { hover: false }
+    );
+  }
+  hoverSource = null;
 }
