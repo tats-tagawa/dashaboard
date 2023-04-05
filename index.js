@@ -121,23 +121,6 @@ async function getPositions(operator) {
   }
 }
 
-/**
- * Return coordinates of vehicles route.
- * @param {string} tripId
- * @returns {Feature}
- */
-async function getShapeCoordinates(operator, shapeId) {
-  const response = await fetch(
-    `http://localhost:3000/shapes?operator=${operator}&shapeId=${shapeId}`
-  );
-  const data = await response.json();
-  if (data.length) {
-    return turf.lineString(data);
-  } else {
-    return false;
-  }
-}
-
 async function updateShapes(operator, color) {
   try {
     const positions = await getPositions(operator);
@@ -222,16 +205,6 @@ async function getAllShapeCoordinates(operator, shapeIds) {
     }),
   };
   const response = await fetch("http://localhost:3000/shapes", options);
-  const data = await response.json();
-  return data;
-}
-
-/**
- * Get all operator information
- * @returns {object}
- */
-async function getOperators() {
-  const response = await fetch("http://localhost:3000/operators");
   const data = await response.json();
   return data;
 }
