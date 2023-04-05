@@ -47,6 +47,7 @@ async function updatePositions(operator, color) {
   };
   // Remove operator source if all vehicle's are inactive
   if (!positions.length && map.getSource(`${operator}-positions`)) {
+    map.removeLayer(`${operator}-positions-layer`);
     map.removeSource(`${operator}-positions`);
     console.log(`Removed ${operator} source`);
   }
@@ -153,6 +154,7 @@ async function updateShapes(operator, color) {
     }
     // remove shapes if all operator vehicles are inactive
     if (!Object.keys(shapes).length && map.getSource(`${operator}-shapes`)) {
+      map.removeLayer(`${operator}-shapes-layer`)
       map.removeSource(`${operator}-shapes`);
       console.log(`Removed ${operator}-shapes source`);
     }
