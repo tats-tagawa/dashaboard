@@ -9,10 +9,10 @@ const map = new mapboxgl.Map({
 
 // Operators to load by default
 const selectedOperators = [];
-const allOperators = ["SC", "SF", "SM", "SA", "CT", "AC", "CC"];
+const allOperators = ["SC", "SF", "SM", "SA", "CT", "AC", "CC", "GG"];
 
 // store setIntervals for all operators
-let intervals = {}
+let intervals = {};
 
 // saves hover state of vehicle positions
 let hoverSource = null;
@@ -134,7 +134,6 @@ async function updateShapes(operator, color) {
       features: [],
     };
     const shapes = await getAllShapeCoordinates(operator, shapeIds);
-
     for (const position of positions) {
       const tripId = position.properties.tripId;
       const shapeId = position.properties.shapeId;
@@ -154,7 +153,7 @@ async function updateShapes(operator, color) {
     }
     // remove shapes if all operator vehicles are inactive
     if (!Object.keys(shapes).length && map.getSource(`${operator}-shapes`)) {
-      map.removeLayer(`${operator}-shapes-layer`)
+      map.removeLayer(`${operator}-shapes-layer`);
       map.removeSource(`${operator}-shapes`);
       console.log(`Removed ${operator}-shapes source`);
     }
@@ -225,59 +224,65 @@ async function getOperator(operator) {
 }
 
 async function createMenu() {
-  const selection = document.getElementById("selections");
-  const form = document.createElement("form");
-  selection.appendChild(form);
-  const allOperatorsSorted = allOperators.sort();
+  try {
+    const selection = document.getElementById("selections");
+    const form = document.createElement("form");
+    selection.appendChild(form);
+    const allOperatorsSorted = allOperators.sort();
 
-  for (const operator of allOperatorsSorted) {
-    const label = document.createElement("label");
-    const checkbox = document.createElement("input");
-    checkbox.type = "checkbox";
-    checkbox.value = operator;
-    label.appendChild(checkbox);
-    label.appendChild(document.createTextNode(operator));
-    form.appendChild(label);
-    const br = document.createElement("br");
-    form.appendChild(br);
+    for (const operator of allOperatorsSorted) {
+      const label = document.createElement("label");
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.value = operator;
+      label.appendChild(checkbox);
+      label.appendChild(document.createTextNode(operator));
+      form.appendChild(label);
+      const br = document.createElement("br");
+      form.appendChild(br);
 
-    const operatorGeneralInfo = await getOperator(operator);
-    const color = operatorGeneralInfo[0].color;
-    label.addEventListener("change", async (e) => {
-      const checked = e.target.checked;
-      const op = e.target.value;
-      if (checked) {
-        selectedOperators.push(op);
-        checkbox.disabled = true;
-        await updateShapes(op, color);
-        await updatePositions(op, color);
-        checkbox.disabled = false;
-        map.on("mouseenter", `${op}-positions-layer`, addHoverEvent)
-        map.on("mouseleave", `${op}-positions-layer`, removeHoverEvent)
-        intervals[op] = setInterval(async () => {
-          await updateShapes(operator, color);
-          await updatePositions(operator, color);
-          console.log("Updated Positions");
-        }, 60000);
-      }
-      if (!checked) {
-        const index = selectedOperators.indexOf(op);
-        if (index !== -1) {
-          selectedOperators.splice(index, 1);
+      const operatorGeneralInfo = await getOperator(operator);
+      const color = operatorGeneralInfo[0].color;
+      label.addEventListener("change", async (e) => {
+        const checked = e.target.checked;
+        const op = e.target.value;
+        if (checked) {
+          selectedOperators.push(op);
+          checkbox.disabled = true;
+          await updateShapes(op, color);
+          await updatePositions(op, color);
+          checkbox.disabled = false;
+          map.on("mouseenter", `${op}-positions-layer`, addHoverEvent);
+          map.on("mouseleave", `${op}-positions-layer`, removeHoverEvent);
+          intervals[op] = setInterval(async () => {
+            await updateShapes(operator, color);
+            await updatePositions(operator, color);
+            console.log("Updated Positions");
+          }, 60000);
         }
-        map.off("mouseenter", `${op}-positions-layer`, addHoverEvent)
-        map.off("mouseleave", `${op}-positions-layer`, removeHoverEvent)
-        clearInterval(intervals[op]);
-        intervals[op] = null;
+        if (!checked) {
+          const index = selectedOperators.indexOf(op);
+          if (index !== -1) {
+            selectedOperators.splice(index, 1);
+          }
+          map.off("mouseenter", `${op}-positions-layer`, addHoverEvent);
+          map.off("mouseleave", `${op}-positions-layer`, removeHoverEvent);
+          clearInterval(intervals[op]);
+          intervals[op] = null;
 
-        if (map.getSource(`${op}-shapes`) && map.getSource(`${op}-positions`)) {
-          map.removeLayer(`${op}-shapes-layer`);
-          map.removeSource(`${op}-shapes`);
-          map.removeLayer(`${op}-positions-layer`);
-          map.removeSource(`${op}-positions`);
+          if (map.getSource(`${op}-shapes`)) {
+            map.removeLayer(`${op}-shapes-layer`);
+            map.removeSource(`${op}-shapes`);
+          }
+          if (map.getSource(`${op}-positions`)) {
+            map.removeLayer(`${op}-positions-layer`);
+            map.removeSource(`${op}-positions`);
+          }
         }
-      }
-    });
+      });
+    }
+  } catch (error) {
+    console.error(error);
   }
 }
 
