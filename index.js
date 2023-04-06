@@ -7,22 +7,19 @@ const map = new mapboxgl.Map({
   zoom: 10, // starting zoom
 });
 
-// Operators to load by default
+// Currently selected operators to show on map
 const selectedOperators = [];
+
+// List of all currently active operators
 let allOperators = [];
 
-// store setIntervals for all operators
+// Store setIntervals for updating vehicle positions
 let intervals = {};
 
-// saves hover state of vehicle positions
+// Store hover state of vehicle positions
 let hoverSource = null;
 
-// List of Data Sources added to map
-// Used to compare with visible sources
-// If not visible, remove source
-const addedSources = [];
-
-// popup bubble config
+// Popup bubble config
 const popup = new mapboxgl.Popup({
   closeButton: false,
   closeOnClick: false,
@@ -36,7 +33,7 @@ map.on("load", async () => {
  * Create and add vehicle position and route layers for
  * specified operator.
  * @param {object} map Object
- * @param {string} operator - operator's code name
+ * @param {string} operator - operator code name
  * @param {string} color - hex color value
  */
 async function updatePositions(operator, color) {
@@ -45,25 +42,26 @@ async function updatePositions(operator, color) {
     type: "FeatureCollection",
     features: positions,
   };
-  // Remove operator source if all vehicle's are inactive
+
+  // Remove operator source and layers if all vehicle's are inactive
   if (!positions.length && map.getSource(`${operator}-positions`)) {
     map.removeLayer(`${operator}-positions-layer`);
     map.removeSource(`${operator}-positions`);
     console.log(`Removed ${operator} source`);
   }
-  // Update source if vehicles are still active
+
+  // Update positions if there are active vehicles
   else if (map.getSource(`${operator}-positions`)) {
     map.getSource(`${operator}-positions`).setData(positionsFeatureCollection);
   }
-  // Only add source if operator has positions
+
+  // Create source and layer and plot positions
   else if (positions.length) {
     map.addSource(`${operator}-positions`, {
       type: "geojson",
       data: positionsFeatureCollection,
       generateId: true,
     });
-
-    addedSources.push(operator);
 
     map.addLayer({
       id: `${operator}-positions-layer`,
@@ -81,7 +79,7 @@ async function updatePositions(operator, color) {
 
 /**
  * Retrive current vehicle positions and update to GeoJSON
- * @param {string} operator - operator's code name
+ * @param {string} operator - operator code name
  * @returns {object} GeoJSON object of all vehicle positions
  */
 async function getPositions(operator) {
@@ -89,10 +87,11 @@ async function getPositions(operator) {
     const response = await fetch(
       `http://localhost:3000/positions?operator=${operator}`
     );
-
     const positions = await response.json();
     const operatorGeneralInfo = await getOperator(operator);
     const operatorName = operatorGeneralInfo.name;
+
+    // Store all positions as GeoJSON
     const positionsGeoJSON = [];
     for (const position of positions) {
       const coordinates = [position.longitude, position.latitude];
@@ -122,17 +121,27 @@ async function getPositions(operator) {
   }
 }
 
+/**
+ * Update shapes on map
+ * @param {string} operator - operator code name
+ * @param {string} color - hex color code
+ */
 async function updateShapes(operator, color) {
   try {
     const positions = await getPositions(operator);
+
+    // Get shape ids of all active transit routes
     const shapeIds = positions.reduce((acc, shape) => {
       acc.push(shape.properties.shapeId);
       return acc;
     }, []);
+
     const shapesFeatureCollection = {
       type: "FeatureCollection",
       features: [],
     };
+
+    // Create GeoJSON with route coodinates of active transit lines
     const shapes = await getAllShapeCoordinates(operator, shapeIds);
     for (const position of positions) {
       const tripId = position.properties.tripId;
@@ -151,17 +160,18 @@ async function updateShapes(operator, color) {
         turf.lineString(coordinates, properties, options)
       );
     }
-    // remove shapes if all operator vehicles are inactive
+
+    // Remove operator source and layers if all vehicle's are inactive
     if (!Object.keys(shapes).length && map.getSource(`${operator}-shapes`)) {
       map.removeLayer(`${operator}-shapes-layer`);
       map.removeSource(`${operator}-shapes`);
       console.log(`Removed ${operator}-shapes source`);
     }
-    // Update shapes if vehicles are still active
+    // Update shapes to add/remove active/inactive transit routes
     else if (map.getSource(`${operator}-shapes`)) {
       map.getSource(`${operator}-shapes`).setData(shapesFeatureCollection);
     }
-    // Only add shapes if operator has positions and shapes
+    // Create source and layer and plot routes
     else if (
       shapesFeatureCollection.features.length &&
       Object.keys(shapes).length
@@ -197,6 +207,12 @@ async function updateShapes(operator, color) {
   }
 }
 
+/**
+ * Get coordinates for all specified shapes
+ * @param {string} operator - operator code name
+ * @param {array} shapeIds - array with shape ids
+ * @returns
+ */
 async function getAllShapeCoordinates(operator, shapeIds) {
   const options = {
     method: "POST",
@@ -226,21 +242,29 @@ async function getOperator(operator) {
   return data[0];
 }
 
+/**
+ * Returns array of operators that are currently active
+ * @returns array
+ */
 async function getActiveOperators() {
   const response = await fetch(`http://localhost:3000/activeOperators`);
   const data = await response.json();
   return data;
 }
 
+/**
+ * Create menu for users to select operator to show on map
+ */
 async function createMenu() {
   try {
     const selection = document.getElementById("selections");
     const form = document.createElement("form");
     selection.appendChild(form);
     allOperators = await getActiveOperators();
-    allOperators = allOperators.map((operator) => operator.operator)
+    allOperators = allOperators.map((operator) => operator.operator);
     const allOperatorsSorted = allOperators.sort();
 
+    // Create checkbox for each active operator
     for (const operator of allOperatorsSorted) {
       const operatorGeneralInfo = await getOperator(operator);
       const color = operatorGeneralInfo.color;
@@ -258,6 +282,7 @@ async function createMenu() {
       label.addEventListener("change", async (e) => {
         const checked = e.target.checked;
         const op = e.target.value;
+        // Add shapes and positions when checkbox is checked
         if (checked) {
           selectedOperators.push(op);
           checkbox.disabled = true;
@@ -272,6 +297,7 @@ async function createMenu() {
             console.log("Updated Positions");
           }, 60000);
         }
+        // Remove shapes and positions when checkbox is unchecked
         if (!checked) {
           const index = selectedOperators.indexOf(op);
           if (index !== -1) {
@@ -298,6 +324,10 @@ async function createMenu() {
   }
 }
 
+/**
+ * Show pop-up with vehicle information and highlight route when hovered
+ * @param {object} e - object with information of vehicle hovered over
+ */
 function addHoverEvent(e) {
   map.getCanvas().style.cursor = "pointer";
   const properties = e.features[0].properties;
@@ -331,6 +361,9 @@ function addHoverEvent(e) {
   }
 }
 
+/**
+ * Hide pop-up with vehicle information and highlight route when mouse leaves
+ */
 function removeHoverEvent() {
   map.getCanvas().style.cursor = "";
   popup.remove();
