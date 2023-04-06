@@ -4,6 +4,7 @@ dotenv.config();
 import {
   getOperatorsTransitData,
   getOperatorColors,
+  getOperatorCommonNames,
   getVehiclePositions,
   getOperatorGTFSDataFeed,
 } from "./transit-data.js";
@@ -27,6 +28,7 @@ function createOperatorsTable(db) {
   (
     id TEXT PRIMARY KEY,
     name TEXT,
+    common_name TEXT,
     color TEXT
   )
   `);
@@ -35,12 +37,13 @@ function createOperatorsTable(db) {
 async function updateOperators(db) {
   deleteTableData(db, "operators");
   const colors = getOperatorColors();
+  const commonName = getOperatorCommonNames()
   const operators = await getOperatorsTransitData();
   for (const operator of operators) {
     if (operator.Id !== "RG") {
-      const operatorData = [operator.Id, operator.Name, colors[operator.Id]];
+      const operatorData = [operator.Id, operator.Name, commonName[operator.Id], colors[operator.Id]];
       db.run(
-        "INSERT INTO operators(id, name, color) VALUES (?, ?, ?)",
+        "INSERT INTO operators(id, name, common_name, color) VALUES (?, ?, ?, ?)",
         operatorData,
         (error) => {
           if (error) {
