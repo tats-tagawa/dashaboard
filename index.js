@@ -92,7 +92,7 @@ async function getPositions(operator) {
 
     const positions = await response.json();
     const operatorGeneralInfo = await getOperator(operator);
-    const operatorName = operatorGeneralInfo[0].name;
+    const operatorName = operatorGeneralInfo.name;
     const positionsGeoJSON = [];
     for (const position of positions) {
       const coordinates = [position.longitude, position.latitude];
@@ -223,7 +223,7 @@ async function getOperator(operator) {
     `http://localhost:3000/operator?operator=${operator}`
   );
   const data = await response.json();
-  return data;
+  return data[0];
 }
 
 async function getActiveOperators() {
@@ -239,22 +239,22 @@ async function createMenu() {
     selection.appendChild(form);
     allOperators = await getActiveOperators();
     allOperators = allOperators.map((operator) => operator.operator)
-    console.log(allOperators)
     const allOperatorsSorted = allOperators.sort();
 
     for (const operator of allOperatorsSorted) {
+      const operatorGeneralInfo = await getOperator(operator);
+      const color = operatorGeneralInfo.color;
+      const commonName = operatorGeneralInfo.common_name;
       const label = document.createElement("label");
       const checkbox = document.createElement("input");
       checkbox.type = "checkbox";
       checkbox.value = operator;
       label.appendChild(checkbox);
-      label.appendChild(document.createTextNode(operator));
+      label.appendChild(document.createTextNode(commonName));
       form.appendChild(label);
       const br = document.createElement("br");
       form.appendChild(br);
 
-      const operatorGeneralInfo = await getOperator(operator);
-      const color = operatorGeneralInfo[0].color;
       label.addEventListener("change", async (e) => {
         const checked = e.target.checked;
         const op = e.target.value;
