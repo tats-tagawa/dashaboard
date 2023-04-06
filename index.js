@@ -161,8 +161,11 @@ async function updateShapes(operator, color) {
     else if (map.getSource(`${operator}-shapes`)) {
       map.getSource(`${operator}-shapes`).setData(shapesFeatureCollection);
     }
-    // Only add shapes if operator has positions
-    else if (shapesFeatureCollection.features.length) {
+    // Only add shapes if operator has positions and shapes
+    else if (
+      shapesFeatureCollection.features.length &&
+      Object.keys(shapes).length
+    ) {
       map.addSource(`${operator}-shapes`, {
         type: "geojson",
         data: shapesFeatureCollection,
@@ -305,7 +308,7 @@ function addHoverEvent(e) {
     )
     .addTo(map);
 
-  if (e.features.length > 0) {
+  if (e.features.length > 0 && shapeId) {
     map.setFeatureState(
       {
         source: `${operator}-shapes`,
@@ -322,8 +325,8 @@ function addHoverEvent(e) {
 function removeHoverEvent() {
   map.getCanvas().style.cursor = "";
   popup.remove();
-  const [operator, tripId] = hoverSource;
   if (hoverSource !== null) {
+    const [operator, tripId] = hoverSource;
     map.setFeatureState(
       {
         source: `${operator}-shapes`,
