@@ -7,6 +7,7 @@ import {
   connectDB,
   getOperators,
   getOperator,
+  getActiveOperators,
   getPositions,
   updatePositions,
   getShapeCoordinates,
@@ -63,9 +64,14 @@ app.get("/operator", async (req, res) => {
   res.send(data);
 });
 
-app.post('/shapes', async (req, res) => {
-  const operator = req.body.operator
+app.get("/activeOperators", async (req, res) => {
+  const data = await getActiveOperators(db);
+  res.send(data);
+});
+
+app.post("/shapes", async (req, res) => {
+  const operator = req.body.operator;
   const shapeIds = req.body.shapeIds;
-  const data = await getAllShapeCoordinates(db, operator, shapeIds)
-  res.send(data)
-})
+  const data = await getAllShapeCoordinates(db, operator, shapeIds);
+  res.send(data);
+});

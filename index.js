@@ -9,7 +9,7 @@ const map = new mapboxgl.Map({
 
 // Operators to load by default
 const selectedOperators = [];
-const allOperators = ["SC", "SF", "SM", "SA", "CT", "AC", "CC", "GG"];
+let allOperators = [];
 
 // store setIntervals for all operators
 let intervals = {};
@@ -226,11 +226,20 @@ async function getOperator(operator) {
   return data;
 }
 
+async function getActiveOperators() {
+  const response = await fetch(`http://localhost:3000/activeOperators`);
+  const data = await response.json();
+  return data;
+}
+
 async function createMenu() {
   try {
     const selection = document.getElementById("selections");
     const form = document.createElement("form");
     selection.appendChild(form);
+    allOperators = await getActiveOperators();
+    allOperators = allOperators.map((operator) => operator.operator)
+    console.log(allOperators)
     const allOperatorsSorted = allOperators.sort();
 
     for (const operator of allOperatorsSorted) {

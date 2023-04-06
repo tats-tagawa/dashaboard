@@ -83,6 +83,19 @@ function getOperator(db, operator) {
   });
 }
 
+function getActiveOperators(db) {
+  return new Promise((resolve, reject) => {
+    let query = `SELECT DISTINCT operator FROM positions`;
+    db.all(query, (error, rows) => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve(rows);
+      }
+    });
+  });
+}
+
 function deleteTableData(db, table) {
   db.run(`DELETE FROM ${table}`);
 }
@@ -337,8 +350,8 @@ async function getShapeCoordinates(db, operator, shapeId) {
 
 async function getAllShapeCoordinates(db, operator, shapeIds) {
   return new Promise((resolve, reject) => {
-    const shapeIdsProcessed = shapeIds.map(shapeId => `'${shapeId}'`);
-    const query = `SELECT * FROM shapes WHERE operator='${operator}' AND shape_id IN (${shapeIdsProcessed.join()}) ORDER BY shape_id, shape_pt_sequence`
+    const shapeIdsProcessed = shapeIds.map((shapeId) => `'${shapeId}'`);
+    const query = `SELECT * FROM shapes WHERE operator='${operator}' AND shape_id IN (${shapeIdsProcessed.join()}) ORDER BY shape_id, shape_pt_sequence`;
     db.all(query, (error, data) => {
       if (error) reject(error);
 
@@ -382,6 +395,7 @@ export {
   updateOperators,
   getOperators,
   getOperator,
+  getActiveOperators,
   getPositions,
   updatePositions,
   getTripShapeId,
