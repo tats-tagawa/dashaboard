@@ -19,8 +19,9 @@ function connectDB() {
   return db;
 }
 
-// db.run("PRAGMA journddal_mode = WAL");
-// db.configure("busyTimeout", 15000);
+function deleteTableData(db, table) {
+  db.run(`DELETE FROM ${table}`);
+}
 
 function createOperatorsTable(db) {
   db.run(`
@@ -33,30 +34,6 @@ function createOperatorsTable(db) {
   )
   `);
 }
-
-async function updateOperators(db) {
-  deleteTableData(db, "operators");
-  const colors = getOperatorColors();
-  const commonName = getOperatorCommonNames()
-  const operators = await getOperatorsTransitData();
-  for (const operator of operators) {
-    if (operator.Id !== "RG") {
-      const operatorData = [operator.Id, operator.Name, commonName[operator.Id], colors[operator.Id]];
-      db.run(
-        "INSERT INTO operators(id, name, common_name, color) VALUES (?, ?, ?, ?)",
-        operatorData,
-        (error) => {
-          if (error) {
-            console.error(error.message);
-          }
-        }
-      );
-    }
-  }
-  console.log("Updated Operators List");
-}
-
-// updateOperators(connectDB())
 
 function getOperators(db) {
   return new Promise((resolve, reject) => {
@@ -99,8 +76,58 @@ function getActiveOperators(db) {
   });
 }
 
-function deleteTableData(db, table) {
-  db.run(`DELETE FROM ${table}`);
+async function updateOperators(db) {
+  deleteTableData(db, "operators");
+  const colors = getOperatorColors();
+  const commonName = getOperatorCommonNames();
+  const operators = await getOperatorsTransitData();
+  for (const operator of operators) {
+    if (operator.Id !== "RG") {
+      const operatorData = [
+        operator.Id,
+        operator.Name,
+        commonName[operator.Id],
+        colors[operator.Id],
+      ];
+      db.run(
+        "INSERT INTO operators(id, name, common_name, color) VALUES (?, ?, ?, ?)",
+        operatorData,
+        (error) => {
+          if (error) {
+            console.error(error.message);
+          }
+        }
+      );
+    }
+  }
+  console.log("Updated Operators List");
+}
+
+async function updateOperatorDataTable(db, operator) {
+  console.log(`Updating ${operator} Data Table`);
+  const operatorData = await getOperatorGTFSDataFeed(operator);
+  for await (const data of operatorData) {
+    if (data[0] === "shapes") {
+      console.log(`Updating ${operator} Shapes`);
+      const status = await updateOperatorShapes(db, data[2], operator);
+      console.log(status);
+    } else if (data[0] === "trips") {
+      console.log(`Updating ${operator} Trips`);
+      const status = await updateOperatorTrips(db, data[2], operator);
+      console.log(status);
+    }
+  }
+  console.log(`Updated ${operator} Data Table`);
+}
+
+async function updateAllOperators() {
+  await updateOperators(db);
+  const operators = await getOperators(db);
+  for (const operator of operators) {
+    console.log(`Updating ${operator.id} ------`);
+    await updateOperatorDataTable(db, operator.id);
+  }
+  console.log("Updated All");
 }
 
 async function createPositionsTable(db) {
@@ -119,6 +146,24 @@ async function createPositionsTable(db) {
       bearing REAL,
       speed REAL
     )`);
+}
+
+function getPositions(db, operator) {
+  return new Promise((resolve, reject) => {
+    let query;
+    if (operator !== "RG") {
+      query = `SELECT * FROM positions WHERE operator = '${operator}'`;
+    } else {
+      query = "SELECT * FROM positions";
+    }
+    db.all(query, (error, rows) => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve(rows);
+      }
+    });
+  });
 }
 
 async function updatePositions(db) {
@@ -165,24 +210,6 @@ async function updatePositions(db) {
   }
 }
 
-function getPositions(db, operator) {
-  return new Promise((resolve, reject) => {
-    let query;
-    if (operator !== "RG") {
-      query = `SELECT * FROM positions WHERE operator = '${operator}'`;
-    } else {
-      query = "SELECT * FROM positions";
-    }
-    db.all(query, (error, rows) => {
-      if (error) {
-        reject(error);
-      } else {
-        resolve(rows);
-      }
-    });
-  });
-}
-
 async function createTripsTable(db) {
   db.run(`
     CREATE TABLE IF NOT EXISTS trips
@@ -200,68 +227,6 @@ async function createTripsTable(db) {
         wheelchair_accessible INT
       )
   `);
-}
-
-async function createShapesTable(db) {
-  db.run(`
-    CREATE TABLE IF NOT EXISTS shapes
-      (
-        operator TEXT,
-        shape_id TEXT,
-        shape_pt_lon REAL,
-        shape_pt_lat REAL,
-        shape_pt_sequence INT,
-        shape_dist_traveled REAL
-      )`);
-}
-
-async function updateOperatorDataTable(db, operator) {
-  console.log(`Updating ${operator} Data Table`);
-  const operatorData = await getOperatorGTFSDataFeed(operator);
-  for await (const data of operatorData) {
-    if (data[0] === "shapes") {
-      console.log(`Updating ${operator} Shapes`);
-      const status = await updateOperatorShapes(db, data[2], operator);
-      console.log(status);
-    } else if (data[0] === "trips") {
-      console.log(`Updating ${operator} Trips`);
-      const status = await updateOperatorTrips(db, data[2], operator);
-      console.log(status);
-    } else {
-    }
-  }
-
-  console.log(`Updated ${operator} Data Table`);
-}
-async function updateOperatorShapes(db, data, operator) {
-  db.run(`DELETE FROM shapes WHERE operator='${operator}'`);
-  let rows = data.split("\r\n");
-  let promises = rows.map((row) => {
-    return new Promise((resolve, reject) => {
-      const shapeData = [operator].concat(row.split(","));
-      const query = `
-          INSERT INTO shapes
-            (operator, shape_id, shape_pt_lon, shape_pt_lat, shape_pt_sequence, shape_dist_traveled)
-          VALUES
-            (?, ?, ?, ?, ?, ?)
-          `;
-      db.run(query, shapeData, (error) => {
-        if (error) {
-          console.log(`Shapes Error - ${shapeData}`);
-          reject(error);
-        } else {
-          resolve("Done");
-        }
-      });
-    });
-  });
-
-  try {
-    await Promise.all(promises);
-  } catch (error) {
-    console.error(error);
-  }
-  return `Updated ${operator} Shapes`;
 }
 
 async function updateOperatorTrips(db, data, operator) {
@@ -301,6 +266,50 @@ async function updateOperatorTrips(db, data, operator) {
   return `Updated ${operator} Trips`;
 }
 
+async function createShapesTable(db) {
+  db.run(`
+    CREATE TABLE IF NOT EXISTS shapes
+      (
+        operator TEXT,
+        shape_id TEXT,
+        shape_pt_lon REAL,
+        shape_pt_lat REAL,
+        shape_pt_sequence INT,
+        shape_dist_traveled REAL
+      )`);
+}
+
+async function updateOperatorShapes(db, data, operator) {
+  db.run(`DELETE FROM shapes WHERE operator='${operator}'`);
+  let rows = data.split("\r\n");
+  let promises = rows.map((row) => {
+    return new Promise((resolve, reject) => {
+      const shapeData = [operator].concat(row.split(","));
+      const query = `
+          INSERT INTO shapes
+            (operator, shape_id, shape_pt_lon, shape_pt_lat, shape_pt_sequence, shape_dist_traveled)
+          VALUES
+            (?, ?, ?, ?, ?, ?)
+          `;
+      db.run(query, shapeData, (error) => {
+        if (error) {
+          console.log(`Shapes Error - ${shapeData}`);
+          reject(error);
+        } else {
+          resolve("Done");
+        }
+      });
+    });
+  });
+
+  try {
+    await Promise.all(promises);
+  } catch (error) {
+    console.error(error);
+  }
+  return `Updated ${operator} Shapes`;
+}
+
 async function getTripShapeId(db, operator, tripId) {
   return new Promise((resolve, reject) => {
     const query = `
@@ -318,8 +327,6 @@ async function getTripShapeId(db, operator, tripId) {
     });
   });
 }
-
-// console.log(await getShapeCoordinates(db, await getTripShape(db, '122')));
 
 async function getShapeIds(db, operator) {
   return new Promise((resolve, reject) => {
@@ -373,25 +380,6 @@ async function getAllShapeCoordinates(db, operator, shapeIds) {
     });
   });
 }
-
-async function updateAllOperators() {
-  await updateOperators(db);
-  const operators = await getOperators(db);
-  for (const operator of operators) {
-    console.log(`Updating ${operator.id} ------`);
-    await updateOperatorDataTable(db, operator.id);
-  }
-  console.log("Updated All");
-}
-
-// updateAllOperators()
-//
-// db.all('pragma table_info(shapes)', (error, data) => {
-//   if (error) {
-//     console.error(error);
-//   }
-//   console.log(data)
-// })
 
 export {
   connectDB,
