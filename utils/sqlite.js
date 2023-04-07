@@ -383,14 +383,11 @@ async function getAllShapeCoordinates(db, operator, shapeIds) {
 
 export {
   connectDB,
-  updateOperators,
   getOperators,
   getOperator,
   getActiveOperators,
   getPositions,
   updatePositions,
-  getTripShapeId,
   getShapeCoordinates,
   getAllShapeCoordinates,
-  updateOperatorDataTable,
 };
