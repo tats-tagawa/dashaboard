@@ -25,7 +25,6 @@ app.listen(port, () => {
 });
 
 const db = connectDB();
-db.run("PRAGMA journddal_mode = WAL");
 
 cron.schedule("*/1 * * * *", async () => {
   await updatePositions(db);

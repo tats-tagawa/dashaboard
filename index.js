@@ -259,6 +259,7 @@ async function createMenu() {
   try {
     const selection = document.getElementById("selections");
     const form = document.createElement("form");
+    form.setAttribute("id", "form");
     selection.appendChild(form);
     allOperators = await getActiveOperators();
     allOperators = allOperators.map((operator) => operator.operator);

@@ -16,6 +16,7 @@ function connectDB() {
     }
   });
   console.log("Connected to dashaboard.db");
+  db.run("PRAGMA journal_mode = WAL;");
   return db;
 }
 
