@@ -436,7 +436,6 @@ async function updateOperatorStops(db, data, operator) {
 
       // add operator id at index 0
       const stopsData = [operator].concat(row);
-      console.log(stopsData.length);
       const query = `
         INSERT INTO stops
           (operator, stop_id, stop_code, stop_name, stop_lat, stop_lon,
