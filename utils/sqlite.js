@@ -122,13 +122,20 @@ async function updateOperatorDataTable(db, operator) {
       console.log(`Updating ${operator} Shapes`);
       const status = await updateOperatorShapes(db, data[2], operator);
       console.log(status);
-    } else if (data[0] === "trips") {
+    }
+    if (data[0] === "trips") {
       console.log(`Updating ${operator} Trips`);
       const status = await updateOperatorTrips(db, data[2], operator);
       console.log(status);
-    } else if (data[0] === "stops") {
+    }
+    if (data[0] === "stops") {
       console.log(`Updating ${operator} Stops`);
       const status = await updateOperatorStops(db, data[2], operator);
+      console.log(status);
+    }
+    if (data[0] === "stop_times") {
+      console.log(`Updating ${operator} Trip Stops`);
+      const status = await updateOperatorTripStops(db, data[2], operator);
       console.log(status);
     }
   }
@@ -489,6 +496,60 @@ async function createTripStopsTable(db) {
         shape_dist_traveled REAL,
         timepoint INT
       )`);
+}
+
+async function updateOperatorTripStops(db, data, operator) {
+  await db.run(`DELETE FROM trip_stops WHERE operator='${operator}'`);
+  let rows = data.split("\r\n");
+  let promises = rows.map((row) => {
+    return new Promise((resolve, reject) => {
+      // add "|" between double commas so it can be splitted correctly
+      const regex = /,,/g;
+      while (regex.test(row)) {
+        row = row.replace(regex, ",|,");
+      }
+
+      // add "|" at end of string if string ends with a comma
+      const regex2 = /,$/g;
+      row = row.replace(regex2, ",|");
+
+      // split by commas except when commas are within double quotes
+      // regex from https://stackoverflow.com/q/11456850/4855664
+      const re = /(".*?"|[^",]+)(?=\s*,|\s*$)/g;
+      row = row.match(re);
+
+      // replace all "|" added earlier with empty string
+      // replace all quotations marks with empty string
+      row = row.map((el) => {
+        el = el.replaceAll("|", "");
+        return el.replaceAll('"', "");
+      });
+
+      // add operator id at index 0
+      const tripStopsData = [operator].concat(row);
+      const query = `
+        INSERT INTO trip_stops
+          (operator, trip_id, arrival_time, departure_time, stop_id, stop_sequence, stop_headsign, pickup_type, drop_off_type, shape_dist_traveled, timepoint)
+        VALUES
+          (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `;
+      db.run(query, tripStopsData, (error) => {
+        if (error) {
+          console.log(`Stops Error - ${tripStopsData}`);
+          console.error(error);
+          reject(error);
+        } else {
+          resolve("Done");
+        }
+      });
+    });
+  });
+  try {
+    await Promise.all(promises);
+  } catch (error) {
+    console.error(error);
+  }
+  return `Updated ${operator} Trip Stops`;
 }
 
 export {
