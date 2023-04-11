@@ -20,6 +20,16 @@ function connectDB() {
   return db;
 }
 
+function createAllTables(db) {
+  createOperatorsTable(db);
+  createTripsTable(db);
+  createPositionsTable(db);
+  createShapesTable(db);
+  createStopsTable(db);
+  createTripStopsTable(db);
+}
+createAllTables(connectDB());
+
 function deleteTableData(db, table) {
   db.run(`DELETE FROM ${table}`);
 }
@@ -461,6 +471,24 @@ async function updateOperatorStops(db, data, operator) {
     console.error(error);
   }
   return `Updated ${operator} Stops`;
+}
+
+async function createTripStopsTable(db) {
+  db.run(`
+    CREATE TABLE IF NOT EXISTS trip_stops
+      (
+        operator TEXT,
+        trip_id TEXT,
+        arrival_time TEXT,
+        departure_time TEXT,
+        stop_id TEXT,
+        stop_sequence INT,
+        stop_headsign TEXT,
+        pickup_type INT,
+        drop_off_type INT,
+        shape_dist_traveled REAL,
+        timepoint INT
+      )`);
 }
 
 export {
