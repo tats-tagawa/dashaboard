@@ -81,7 +81,8 @@ function getActiveOperators(db) {
       if (error) {
         reject(error);
       } else {
-        resolve(rows);
+        const operators = rows.map((row) => row.operator)
+        resolve(operators);
       }
     });
   });
@@ -424,28 +425,38 @@ async function createStopsTable(db) {
       )`);
 }
 
+// async function getOperatorTripStops(db, operator, tripIds) {
+//   return new Promise((resolve, reject) => {
+//     const tripIdsProcessed = tripIds.map((tripId) => `'${tripId}'`);
+//     const query = `SELECT * FROM trip_stops WHERE operator='${operator}' AND trip_id IN (${tripIdsProcessed.join()}) ORDER BY trip_id, stop_sequence`;
+//     db.all(query, (error, data) => {
+//       if (error) reject(error);
+
+//       // acc: object with shape coordinates {shapeId: coordinates}
+//       const tripStops = data.reduce((acc, { trip_id, stop_id }) => {
+//         if (!acc[trip_id]) {
+//           acc[trip_id] = [];
+//         }
+//         acc[trip_id].push(stop_id);
+//         return acc;
+//       }, {});
+//       resolve(tripStops);
+//     });
+//   });
+// }
+
 async function getOperatorTripStops(db, operator, tripIds) {
   return new Promise((resolve, reject) => {
     const tripIdsProcessed = tripIds.map((tripId) => `'${tripId}'`);
-    const query = `SELECT * FROM trip_stops WHERE operator='${operator}' AND trip_id IN (${tripIdsProcessed.join()}) ORDER BY trip_id, stop_sequence`;
+    const query = `SELECT * FROM stops WHERE stop_id IN (SELECT DISTINCT stop_id FROM trip_stops WHERE operator='${operator}' AND trip_id IN (${tripIdsProcessed}))`;
     db.all(query, (error, data) => {
       if (error) reject(error);
-
-      // acc: object with shape coordinates {shapeId: coordinates}
-      const tripStops = data.reduce(
-        (acc, {trip_id, stop_id}) => {
-          if (!acc[trip_id]) {
-            acc[trip_id] = [];
-          }
-          acc[trip_id].push(stop_id);
-          return acc;
-        },
-        {}
-      );
-      resolve(tripStops);
+      resolve(data);
     });
   });
 }
+
+// console.log(await getActiveOperatorTripStops(connectDB(), 'CT', ['108','110','305','306']))
 
 async function updateOperatorStops(db, data, operator) {
   await db.run(`DELETE FROM stops WHERE operator='${operator}'`);
@@ -584,4 +595,5 @@ export {
   updatePositions,
   getShapeCoordinates,
   getAllShapeCoordinates,
+  getOperatorTripStops,
 };
