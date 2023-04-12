@@ -367,8 +367,8 @@ async function getShapeIds(db, operator) {
 
 async function getShapeCoordinates(db, operator, shapeId) {
   return new Promise((resolve, reject) => {
-    const coordinate_query = `SELECT shape_pt_lon, shape_pt_lat FROM shapes WHERE operator='${operator}' AND shape_id='${shapeId}' ORDER BY shape_pt_sequence`;
-    db.all(coordinate_query, (error, coordinates) => {
+    const query = `SELECT shape_pt_lon, shape_pt_lat FROM shapes WHERE operator='${operator}' AND shape_id='${shapeId}' ORDER BY shape_pt_sequence`;
+    db.all(query, (error, coordinates) => {
       if (error) {
         reject(error);
       }
@@ -422,6 +422,29 @@ async function createStopsTable(db) {
         wheelchair_boarding INT,
         platform_code
       )`);
+}
+
+async function getOperatorTripStops(db, operator, tripIds) {
+  return new Promise((resolve, reject) => {
+    const tripIdsProcessed = tripIds.map((tripId) => `'${tripId}'`);
+    const query = `SELECT * FROM trip_stops WHERE operator='${operator}' AND trip_id IN (${tripIdsProcessed.join()}) ORDER BY trip_id, stop_sequence`;
+    db.all(query, (error, data) => {
+      if (error) reject(error);
+
+      // acc: object with shape coordinates {shapeId: coordinates}
+      const tripStops = data.reduce(
+        (acc, {trip_id, stop_id}) => {
+          if (!acc[trip_id]) {
+            acc[trip_id] = [];
+          }
+          acc[trip_id].push(stop_id);
+          return acc;
+        },
+        {}
+      );
+      resolve(tripStops);
+    });
+  });
 }
 
 async function updateOperatorStops(db, data, operator) {
