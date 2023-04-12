@@ -126,7 +126,7 @@ async function getPositions(operator) {
  * @param {string} operator - operator code name
  * @param {string} color - hex color code
  */
-async function updateShapes(operator, color) {
+async function updateShapesAndTripStops(operator, color) {
   try {
     const positions = await getPositions(operator);
 
@@ -151,7 +151,7 @@ async function updateShapes(operator, color) {
     const tripStopsFeatureCollection = {
       type: "FeatureCollection",
       features: [],
-    }
+    };
 
     // Create GeoJSON with route coodinates of active transit lines
     const shapes = await getAllShapeCoordinates(operator, shapeIds);
@@ -220,32 +220,46 @@ async function updateShapes(operator, color) {
       const coordinates = [tripStop.stop_lon, tripStop.stop_lat];
       tripStopsFeatureCollection.features.push({
         type: "Feature",
-        properties: {
-          
-        },
+        properties: {},
         geometry: {
           type: "Point",
           coordinates: coordinates,
         },
       });
     }
-    map.addSource(`${operator}-trip-stops`, {
-      type: "geojson",
-      data: tripStopsFeatureCollection,
-      generateId: true,
-    });
+    // Remove operator trip-stops source and layers if all vehicle's are inactive
+    if (!Object.keys(tripStops).length && map.getSource(`${operator}-trip-stops`)) {
+      map.removeLayer(`${operator}-trip-stops-layer`);
+      map.removeSource(`${operator}-trip-stops`);
+      console.log(`Removed ${operator}-trip-stops source`);
+    }
+    // Update trip-stops to add/remove active/inactive transit routes
+    else if (map.getSource(`${operator}-trip-stops`)) {
+      map.getSource(`${operator}-trip-stops`).setData(tripStopsFeatureCollection);
+    }
+    // Create source and layer and plot trip-stops
+    else if (
+      tripStopsFeatureCollection.features.length &&
+      Object.keys(tripStops).length
+    ) {
+      map.addSource(`${operator}-trip-stops`, {
+        type: "geojson",
+        data: tripStopsFeatureCollection,
+        generateId: true,
+      });
 
-    map.addLayer({
-      id: `${operator}-trip-stops-layer`,
-      type: "circle",
-      source: `${operator}-trip-stops`,
-      paint: {
-        "circle-color": "#ffffff",
-        "circle-radius": 3,
-        "circle-stroke-width": 1,
-        "circle-stroke-color": "#000",
-      },
-    });
+      map.addLayer({
+        id: `${operator}-trip-stops-layer`,
+        type: "circle",
+        source: `${operator}-trip-stops`,
+        paint: {
+          "circle-color": "#ffffff",
+          "circle-radius": 3,
+          "circle-stroke-width": 1,
+          "circle-stroke-color": "#000",
+        },
+      });
+    }
   } catch (error) {
     console.log(error);
   }
@@ -330,7 +344,7 @@ async function createMenu() {
         if (checked) {
           selectedOperators.push(op);
           checkbox.disabled = true;
-          await updateShapes(op, color);
+          await updateShapesAndTripStops(op, color);
           await updatePositions(op, color);
           checkbox.disabled = false;
           map.on(
@@ -344,7 +358,7 @@ async function createMenu() {
             leavePositionsHoverEvent
           );
           intervals[op] = setInterval(async () => {
-            await updateShapes(operator, color);
+            await updateShapesAndTripStops(operator, color);
             await updatePositions(operator, color);
             console.log("Updated Positions");
           }, 60000);
@@ -375,6 +389,14 @@ async function createMenu() {
           if (map.getSource(`${op}-positions`)) {
             map.removeLayer(`${op}-positions-layer`);
             map.removeSource(`${op}-positions`);
+          }
+          if (map.getSource(`${op}-shapes`)) {
+            map.removeLayer(`${op}-shapes-layer`);
+            map.removeSource(`${op}-shapes`);
+          }
+          if (map.getSource(`${op}-trip-stops`)) {
+            map.removeLayer(`${op}-trip-stops-layer`);
+            map.removeSource(`${op}-trip-stops`);
           }
         }
       });
