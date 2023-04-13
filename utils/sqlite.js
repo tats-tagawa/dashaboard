@@ -20,6 +20,16 @@ function connectDB() {
   return db;
 }
 
+function createAllTables(db) {
+  createOperatorsTable(db);
+  createTripsTable(db);
+  createPositionsTable(db);
+  createShapesTable(db);
+  createStopsTable(db);
+  createTripStopsTable(db);
+}
+createAllTables(connectDB());
+
 function deleteTableData(db, table) {
   db.run(`DELETE FROM ${table}`);
 }
@@ -71,7 +81,8 @@ function getActiveOperators(db) {
       if (error) {
         reject(error);
       } else {
-        resolve(rows);
+        const operators = rows.map((row) => row.operator)
+        resolve(operators);
       }
     });
   });
@@ -112,13 +123,20 @@ async function updateOperatorDataTable(db, operator) {
       console.log(`Updating ${operator} Shapes`);
       const status = await updateOperatorShapes(db, data[2], operator);
       console.log(status);
-    } else if (data[0] === "trips") {
+    }
+    if (data[0] === "trips") {
       console.log(`Updating ${operator} Trips`);
       const status = await updateOperatorTrips(db, data[2], operator);
       console.log(status);
-    } else if (data[0] === "stops") {
+    }
+    if (data[0] === "stops") {
       console.log(`Updating ${operator} Stops`);
       const status = await updateOperatorStops(db, data[2], operator);
+      console.log(status);
+    }
+    if (data[0] === "stop_times") {
+      console.log(`Updating ${operator} Trip Stops`);
+      const status = await updateOperatorTripStops(db, data[2], operator);
       console.log(status);
     }
   }
@@ -350,8 +368,8 @@ async function getShapeIds(db, operator) {
 
 async function getShapeCoordinates(db, operator, shapeId) {
   return new Promise((resolve, reject) => {
-    const coordinate_query = `SELECT shape_pt_lon, shape_pt_lat FROM shapes WHERE operator='${operator}' AND shape_id='${shapeId}' ORDER BY shape_pt_sequence`;
-    db.all(coordinate_query, (error, coordinates) => {
+    const query = `SELECT shape_pt_lon, shape_pt_lat FROM shapes WHERE operator='${operator}' AND shape_id='${shapeId}' ORDER BY shape_pt_sequence`;
+    db.all(query, (error, coordinates) => {
       if (error) {
         reject(error);
       }
@@ -405,6 +423,17 @@ async function createStopsTable(db) {
         wheelchair_boarding INT,
         platform_code
       )`);
+}
+
+async function getOperatorTripStops(db, operator, tripIds) {
+  return new Promise((resolve, reject) => {
+    const tripIdsProcessed = tripIds.map((tripId) => `'${tripId}'`);
+    const query = `SELECT * FROM stops WHERE stop_id IN (SELECT DISTINCT stop_id FROM trip_stops WHERE operator='${operator}' AND trip_id IN (${tripIdsProcessed}))`;
+    db.all(query, (error, data) => {
+      if (error) reject(error);
+      resolve(data);
+    });
+  });
 }
 
 async function updateOperatorStops(db, data, operator) {
@@ -463,6 +492,78 @@ async function updateOperatorStops(db, data, operator) {
   return `Updated ${operator} Stops`;
 }
 
+async function createTripStopsTable(db) {
+  db.run(`
+    CREATE TABLE IF NOT EXISTS trip_stops
+      (
+        operator TEXT,
+        trip_id TEXT,
+        arrival_time TEXT,
+        departure_time TEXT,
+        stop_id TEXT,
+        stop_sequence INT,
+        stop_headsign TEXT,
+        pickup_type INT,
+        drop_off_type INT,
+        shape_dist_traveled REAL,
+        timepoint INT
+      )`);
+}
+
+async function updateOperatorTripStops(db, data, operator) {
+  await db.run(`DELETE FROM trip_stops WHERE operator='${operator}'`);
+  let rows = data.split("\r\n");
+  let promises = rows.map((row) => {
+    return new Promise((resolve, reject) => {
+      // add "|" between double commas so it can be splitted correctly
+      const regex = /,,/g;
+      while (regex.test(row)) {
+        row = row.replace(regex, ",|,");
+      }
+
+      // add "|" at end of string if string ends with a comma
+      const regex2 = /,$/g;
+      row = row.replace(regex2, ",|");
+
+      // split by commas except when commas are within double quotes
+      // regex from https://stackoverflow.com/q/11456850/4855664
+      const re = /(".*?"|[^",]+)(?=\s*,|\s*$)/g;
+      row = row.match(re);
+
+      // replace all "|" added earlier with empty string
+      // replace all quotations marks with empty string
+      row = row.map((el) => {
+        el = el.replaceAll("|", "");
+        return el.replaceAll('"', "");
+      });
+
+      // add operator id at index 0
+      const tripStopsData = [operator].concat(row);
+      const query = `
+        INSERT INTO trip_stops
+          (operator, trip_id, arrival_time, departure_time, stop_id, stop_sequence, stop_headsign, pickup_type, drop_off_type, shape_dist_traveled, timepoint)
+        VALUES
+          (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `;
+      db.run(query, tripStopsData, (error) => {
+        if (error) {
+          console.log(`Stops Error - ${tripStopsData}`);
+          console.error(error);
+          reject(error);
+        } else {
+          resolve("Done");
+        }
+      });
+    });
+  });
+  try {
+    await Promise.all(promises);
+  } catch (error) {
+    console.error(error);
+  }
+  return `Updated ${operator} Trip Stops`;
+}
+
 export {
   connectDB,
   getOperators,
@@ -472,4 +573,5 @@ export {
   updatePositions,
   getShapeCoordinates,
   getAllShapeCoordinates,
+  getOperatorTripStops,
 };

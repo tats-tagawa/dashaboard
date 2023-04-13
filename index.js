@@ -92,10 +92,10 @@ async function getPositions(operator) {
     const operatorName = operatorGeneralInfo.name;
 
     // Store all positions as GeoJSON
-    const positionsGeoJSON = [];
+    const positionFeatures = [];
     for (const position of positions) {
       const coordinates = [position.longitude, position.latitude];
-      positionsGeoJSON.push({
+      positionFeatures.push({
         type: "Feature",
         properties: {
           operator: position.operator,
@@ -115,9 +115,9 @@ async function getPositions(operator) {
         },
       });
     }
-    return positionsGeoJSON;
+    return positionFeatures;
   } catch (error) {
-    console.log(error);
+    console.error(error);
   }
 }
 
@@ -126,17 +126,23 @@ async function getPositions(operator) {
  * @param {string} operator - operator code name
  * @param {string} color - hex color code
  */
-async function updateShapes(operator, color) {
+async function updateShapesAndTripStops(operator, color) {
   try {
     const positions = await getPositions(operator);
+    const shapeIds = [];
+    const tripIds = [];
 
-    // Get shape ids of all active transit routes
-    const shapeIds = positions.reduce((acc, shape) => {
-      acc.push(shape.properties.shapeId);
-      return acc;
-    }, []);
+    for (const position of positions) {
+      shapeIds.push(position.properties.shapeId);
+      tripIds.push(position.properties.tripId);
+    }
 
     const shapesFeatureCollection = {
+      type: "FeatureCollection",
+      features: [],
+    };
+
+    const tripStopsFeatureCollection = {
       type: "FeatureCollection",
       features: [],
     };
@@ -201,9 +207,62 @@ async function updateShapes(operator, color) {
         },
       });
     }
-    // console.log(shapesFeatures);
+
+    // Create GeoJSON of trip stops (stations)
+    const tripStops = await getOperatorTripStops(operator, tripIds);
+    for (const tripStop of tripStops) {
+      const coordinates = [tripStop.stop_lon, tripStop.stop_lat];
+      tripStopsFeatureCollection.features.push({
+        type: "Feature",
+        properties: {
+          stopName: tripStop.stop_name,
+        },
+        geometry: {
+          type: "Point",
+          coordinates: coordinates,
+        },
+      });
+    }
+    // Remove operator trip-stops source and layers if all vehicle's are inactive
+    if (
+      !Object.keys(tripStops).length &&
+      map.getSource(`${operator}-trip-stops`)
+    ) {
+      map.removeLayer(`${operator}-trip-stops-layer`);
+      map.removeSource(`${operator}-trip-stops`);
+      console.log(`Removed ${operator}-trip-stops source`);
+    }
+    // Update trip-stops to add/remove active/inactive transit routes
+    else if (map.getSource(`${operator}-trip-stops`)) {
+      map
+        .getSource(`${operator}-trip-stops`)
+        .setData(tripStopsFeatureCollection);
+    }
+    // Create source and layer and plot trip-stops
+    else if (
+      tripStopsFeatureCollection.features.length &&
+      Object.keys(tripStops).length
+    ) {
+      map.addSource(`${operator}-trip-stops`, {
+        type: "geojson",
+        data: tripStopsFeatureCollection,
+        generateId: true,
+      });
+
+      map.addLayer({
+        id: `${operator}-trip-stops-layer`,
+        type: "circle",
+        source: `${operator}-trip-stops`,
+        paint: {
+          "circle-color": "#ffffff",
+          "circle-radius": 3,
+          "circle-stroke-width": 1,
+          "circle-stroke-color": "#000",
+        },
+      });
+    }
   } catch (error) {
-    console.log(error);
+    console.error(error);
   }
 }
 
@@ -247,7 +306,7 @@ async function getOperator(operator) {
  * @returns array
  */
 async function getActiveOperators() {
-  const response = await fetch(`http://localhost:3000/activeOperators`);
+  const response = await fetch(`http://localhost:3000/active-operators`);
   const data = await response.json();
   return data;
 }
@@ -262,7 +321,6 @@ async function createMenu() {
     form.setAttribute("id", "form");
     selection.appendChild(form);
     allOperators = await getActiveOperators();
-    allOperators = allOperators.map((operator) => operator.operator);
     const allOperatorsSorted = allOperators.sort();
 
     // Create checkbox for each active operator
@@ -287,13 +345,31 @@ async function createMenu() {
         if (checked) {
           selectedOperators.push(op);
           checkbox.disabled = true;
-          await updateShapes(op, color);
+          await updateShapesAndTripStops(op, color);
           await updatePositions(op, color);
           checkbox.disabled = false;
-          map.on("mouseenter", `${op}-positions-layer`, addHoverEvent);
-          map.on("mouseleave", `${op}-positions-layer`, removeHoverEvent);
+          map.on(
+            "mouseenter",
+            `${op}-positions-layer`,
+            enterPositionsHoverEvent
+          );
+          map.on(
+            "mouseleave",
+            `${op}-positions-layer`,
+            leavePositionsHoverEvent
+          );
+          map.on(
+            "mouseenter",
+            `${op}-trip-stops-layer`,
+            enterTripStopsHoverEvent
+          );
+          map.on(
+            "mouseleave",
+            `${op}-trip-stops-layer`,
+            leaveTripStopHoverEvent
+          );
           intervals[op] = setInterval(async () => {
-            await updateShapes(operator, color);
+            await updateShapesAndTripStops(operator, color);
             await updatePositions(operator, color);
             console.log("Updated Positions");
           }, 60000);
@@ -304,8 +380,26 @@ async function createMenu() {
           if (index !== -1) {
             selectedOperators.splice(index, 1);
           }
-          map.off("mouseenter", `${op}-positions-layer`, addHoverEvent);
-          map.off("mouseleave", `${op}-positions-layer`, removeHoverEvent);
+          map.off(
+            "mouseenter",
+            `${op}-positions-layer`,
+            enterPositionsHoverEvent
+          );
+          map.off(
+            "mouseleave",
+            `${op}-positions-layer`,
+            leavePositionsHoverEvent
+          );
+          map.off(
+            "mouseenter",
+            `${op}-trip-stops-layer`,
+            enterTripStopsHoverEvent
+          );
+          map.off(
+            "mouseleave",
+            `${op}-trip-stops-layer`,
+            leaveTripStopHoverEvent
+          );
           clearInterval(intervals[op]);
           intervals[op] = null;
 
@@ -316,6 +410,14 @@ async function createMenu() {
           if (map.getSource(`${op}-positions`)) {
             map.removeLayer(`${op}-positions-layer`);
             map.removeSource(`${op}-positions`);
+          }
+          if (map.getSource(`${op}-shapes`)) {
+            map.removeLayer(`${op}-shapes-layer`);
+            map.removeSource(`${op}-shapes`);
+          }
+          if (map.getSource(`${op}-trip-stops`)) {
+            map.removeLayer(`${op}-trip-stops-layer`);
+            map.removeSource(`${op}-trip-stops`);
           }
         }
       });
@@ -329,7 +431,7 @@ async function createMenu() {
  * Show pop-up with vehicle information and highlight route when hovered
  * @param {object} e - object with information of vehicle hovered over
  */
-function addHoverEvent(e) {
+function enterPositionsHoverEvent(e) {
   map.getCanvas().style.cursor = "pointer";
   const properties = e.features[0].properties;
   const operator = properties.operator;
@@ -365,7 +467,7 @@ function addHoverEvent(e) {
 /**
  * Hide pop-up with vehicle information and highlight route when mouse leaves
  */
-function removeHoverEvent() {
+function leavePositionsHoverEvent() {
   map.getCanvas().style.cursor = "";
   popup.remove();
   if (hoverSource !== null) {
@@ -379,4 +481,36 @@ function removeHoverEvent() {
     );
   }
   hoverSource = null;
+}
+
+function enterTripStopsHoverEvent(e) {
+  map.getCanvas().style.cursor = "pointer";
+  const properties = e.features[0].properties;
+  const stopName = properties.stopName;
+  const coordinates = [e.lngLat.lng, e.lngLat.lat];
+  popup
+    .setLngLat(coordinates)
+    .setHTML(`<strong>${stopName}</strong>`)
+    .addTo(map);
+}
+
+function leaveTripStopHoverEvent() {
+  map.getCanvas().style.cursor = "";
+  popup.remove();
+}
+
+async function getOperatorTripStops(operator, tripIds) {
+  const options = {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      operator: operator,
+      tripIds: tripIds,
+    }),
+  };
+  const response = await fetch("http://localhost:3000/trip-stops", options);
+  const data = await response.json();
+  return data;
 }

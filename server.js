@@ -12,6 +12,7 @@ import {
   updatePositions,
   getShapeCoordinates,
   getAllShapeCoordinates,
+  getOperatorTripStops,
 } from "./utils/sqlite.js";
 
 const app = express();
@@ -36,7 +37,7 @@ app.get("/positions", async (req, res) => {
     const positions = await getPositions(db, req.query.operator);
     res.send(positions);
   } catch (error) {
-    console.log(error);
+    console.error(error);
   }
 });
 
@@ -63,7 +64,7 @@ app.get("/operator", async (req, res) => {
   res.send(data);
 });
 
-app.get("/activeOperators", async (req, res) => {
+app.get("/active-operators", async (req, res) => {
   const data = await getActiveOperators(db);
   res.send(data);
 });
@@ -72,5 +73,12 @@ app.post("/shapes", async (req, res) => {
   const operator = req.body.operator;
   const shapeIds = req.body.shapeIds;
   const data = await getAllShapeCoordinates(db, operator, shapeIds);
+  res.send(data);
+});
+
+app.post("/trip-stops", async (req, res) => {
+  const operator = req.body.operator;
+  const tripIds = req.body.tripIds;
+  const data = await getOperatorTripStops(db, operator, tripIds);
   res.send(data);
 });

@@ -5,3 +5,4 @@ GTFSDataFeeds
 *.db
 *.db-*
 .eslintrc.json
+*.sql
