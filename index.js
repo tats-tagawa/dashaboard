@@ -213,14 +213,16 @@ async function updateShapesAndTripStops(operator, color) {
         },
       });
     }
-    // console.log(shapesFeatures);
 
+    // Create GeoJSON of trip stops (stations)
     const tripStops = await getOperatorTripStops(operator, tripIds);
     for (const tripStop of tripStops) {
       const coordinates = [tripStop.stop_lon, tripStop.stop_lat];
       tripStopsFeatureCollection.features.push({
         type: "Feature",
-        properties: {},
+        properties: {
+          stopName: tripStop.stop_name,
+        },
         geometry: {
           type: "Point",
           coordinates: coordinates,
@@ -228,14 +230,19 @@ async function updateShapesAndTripStops(operator, color) {
       });
     }
     // Remove operator trip-stops source and layers if all vehicle's are inactive
-    if (!Object.keys(tripStops).length && map.getSource(`${operator}-trip-stops`)) {
+    if (
+      !Object.keys(tripStops).length &&
+      map.getSource(`${operator}-trip-stops`)
+    ) {
       map.removeLayer(`${operator}-trip-stops-layer`);
       map.removeSource(`${operator}-trip-stops`);
       console.log(`Removed ${operator}-trip-stops source`);
     }
     // Update trip-stops to add/remove active/inactive transit routes
     else if (map.getSource(`${operator}-trip-stops`)) {
-      map.getSource(`${operator}-trip-stops`).setData(tripStopsFeatureCollection);
+      map
+        .getSource(`${operator}-trip-stops`)
+        .setData(tripStopsFeatureCollection);
     }
     // Create source and layer and plot trip-stops
     else if (
@@ -357,6 +364,16 @@ async function createMenu() {
             `${op}-positions-layer`,
             leavePositionsHoverEvent
           );
+          map.on(
+            "mouseenter",
+            `${op}-trip-stops-layer`,
+            enterTripStopsHoverEvent
+          );
+          map.on(
+            "mouseleave",
+            `${op}-trip-stops-layer`,
+            leaveTripStopHoverEvent
+          );
           intervals[op] = setInterval(async () => {
             await updateShapesAndTripStops(operator, color);
             await updatePositions(operator, color);
@@ -378,6 +395,16 @@ async function createMenu() {
             "mouseleave",
             `${op}-positions-layer`,
             leavePositionsHoverEvent
+          );
+          map.off(
+            "mouseenter",
+            `${op}-trip-stops-layer`,
+            enterTripStopsHoverEvent
+          );
+          map.off(
+            "mouseleave",
+            `${op}-trip-stops-layer`,
+            leaveTripStopHoverEvent
           );
           clearInterval(intervals[op]);
           intervals[op] = null;
@@ -460,6 +487,22 @@ function leavePositionsHoverEvent() {
     );
   }
   hoverSource = null;
+}
+
+function enterTripStopsHoverEvent(e) {
+  map.getCanvas().style.cursor = "pointer";
+  const properties = e.features[0].properties;
+  const stopName = properties.stopName;
+  const coordinates = [e.lngLat.lng, e.lngLat.lat];
+  popup
+    .setLngLat(coordinates)
+    .setHTML(`<strong>${stopName}</strong>`)
+    .addTo(map);
+}
+
+function leaveTripStopHoverEvent() {
+  map.getCanvas().style.cursor = "";
+  popup.remove();
 }
 
 async function getOperatorTripStops(operator, tripIds) {

@@ -456,8 +456,6 @@ async function getOperatorTripStops(db, operator, tripIds) {
   });
 }
 
-// console.log(await getActiveOperatorTripStops(connectDB(), 'CT', ['108','110','305','306']))
-
 async function updateOperatorStops(db, data, operator) {
   await db.run(`DELETE FROM stops WHERE operator='${operator}'`);
   let rows = data.split("\r\n");

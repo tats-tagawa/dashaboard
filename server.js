@@ -37,7 +37,7 @@ app.get("/positions", async (req, res) => {
     const positions = await getPositions(db, req.query.operator);
     res.send(positions);
   } catch (error) {
-    console.log(error);
+    console.error(error);
   }
 });
 
