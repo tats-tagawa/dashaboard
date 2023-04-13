@@ -117,7 +117,7 @@ async function getPositions(operator) {
     }
     return positionFeatures;
   } catch (error) {
-    console.log(error);
+    console.error(error);
   }
 }
 
@@ -129,15 +129,9 @@ async function getPositions(operator) {
 async function updateShapesAndTripStops(operator, color) {
   try {
     const positions = await getPositions(operator);
-
-    // Get shape ids of all active transit routes
-    // const shapeIds = positions.reduce((acc, shape) => {
-    //   acc.push(shape.properties.shapeId);
-    //   return acc;
-    // }, []);
-
     const shapeIds = [];
     const tripIds = [];
+
     for (const position of positions) {
       shapeIds.push(position.properties.shapeId);
       tripIds.push(position.properties.tripId);
@@ -268,7 +262,7 @@ async function updateShapesAndTripStops(operator, color) {
       });
     }
   } catch (error) {
-    console.log(error);
+    console.error(error);
   }
 }
 

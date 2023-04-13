@@ -425,26 +425,6 @@ async function createStopsTable(db) {
       )`);
 }
 
-// async function getOperatorTripStops(db, operator, tripIds) {
-//   return new Promise((resolve, reject) => {
-//     const tripIdsProcessed = tripIds.map((tripId) => `'${tripId}'`);
-//     const query = `SELECT * FROM trip_stops WHERE operator='${operator}' AND trip_id IN (${tripIdsProcessed.join()}) ORDER BY trip_id, stop_sequence`;
-//     db.all(query, (error, data) => {
-//       if (error) reject(error);
-
-//       // acc: object with shape coordinates {shapeId: coordinates}
-//       const tripStops = data.reduce((acc, { trip_id, stop_id }) => {
-//         if (!acc[trip_id]) {
-//           acc[trip_id] = [];
-//         }
-//         acc[trip_id].push(stop_id);
-//         return acc;
-//       }, {});
-//       resolve(tripStops);
-//     });
-//   });
-// }
-
 async function getOperatorTripStops(db, operator, tripIds) {
   return new Promise((resolve, reject) => {
     const tripIdsProcessed = tripIds.map((tripId) => `'${tripId}'`);
