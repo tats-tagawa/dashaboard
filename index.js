@@ -3,8 +3,8 @@ mapboxgl.accessToken =
 const map = new mapboxgl.Map({
   container: "map", // container ID
   style: "mapbox://styles/mapbox/light-v10", // style URL
-  center: [-122.17596124368328, 37.66017438365425], // starting position [lng, lat]
-  zoom: 10, // starting zoom
+  center: [-122.27596124368328, 37.73017438365425], // starting position [lng, lat]
+  zoom: 9.4, // starting zoom
 });
 
 // Currently selected operators to show on map
@@ -329,8 +329,9 @@ async function createMenu() {
       const commonName = operator.common_name;
       const label = document.createElement("label");
       const checkbox = document.createElement("input");
+      const operatorId = operator.id
       checkbox.type = "checkbox";
-      checkbox.value = operator.id;
+      checkbox.value = operatorId;
       label.appendChild(checkbox);
       label.appendChild(document.createTextNode(commonName));
       form.appendChild(label);
@@ -368,8 +369,8 @@ async function createMenu() {
             leaveTripStopHoverEvent
           );
           intervals[op] = setInterval(async () => {
-            await updateShapesAndTripStops(operator, color);
-            await updatePositions(operator, color);
+            await updateShapesAndTripStops(operatorId, color);
+            await updatePositions(operatorId, color);
             console.log("Updated Positions");
           }, 60000);
         }
