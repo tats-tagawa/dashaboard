@@ -76,13 +76,12 @@ function getOperator(db, operator) {
 
 function getActiveOperators(db) {
   return new Promise((resolve, reject) => {
-    let query = `SELECT DISTINCT operator FROM positions`;
+    let query = `SELECT * FROM operators WHERE id IN (SELECT DISTINCT operator FROM positions) ORDER BY common_name`;
     db.all(query, (error, rows) => {
       if (error) {
         reject(error);
       } else {
-        const operators = rows.map((row) => row.operator)
-        resolve(operators);
+        resolve(rows);
       }
     });
   });

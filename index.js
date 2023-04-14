@@ -325,13 +325,12 @@ async function createMenu() {
 
     // Create checkbox for each active operator
     for (const operator of allOperatorsSorted) {
-      const operatorGeneralInfo = await getOperator(operator);
-      const color = operatorGeneralInfo.color;
-      const commonName = operatorGeneralInfo.common_name;
+      const color = operator.color;
+      const commonName = operator.common_name;
       const label = document.createElement("label");
       const checkbox = document.createElement("input");
       checkbox.type = "checkbox";
-      checkbox.value = operator;
+      checkbox.value = operator.id;
       label.appendChild(checkbox);
       label.appendChild(document.createTextNode(commonName));
       form.appendChild(label);
