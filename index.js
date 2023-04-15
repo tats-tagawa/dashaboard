@@ -255,7 +255,13 @@ async function updateShapesAndTripStops(operator, color) {
         source: `${operator}-trip-stops`,
         paint: {
           "circle-color": "#ffffff",
-          "circle-radius": 3,
+          "circle-radius": {
+            base: 1.5,
+            stops: [
+              [9.4, 1.5],
+              [16, 7],
+            ],
+          },
           "circle-stroke-width": 1,
           "circle-stroke-color": "#000",
         },
@@ -329,7 +335,7 @@ async function createMenu() {
       const commonName = operator.common_name;
       const label = document.createElement("label");
       const checkbox = document.createElement("input");
-      const operatorId = operator.id
+      const operatorId = operator.id;
       checkbox.type = "checkbox";
       checkbox.value = operatorId;
       label.appendChild(checkbox);
