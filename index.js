@@ -162,11 +162,14 @@ async function updateShapesAndTripStops(operator, color) {
       const options = {
         id: `${operator}-${tripId}`,
       };
-      shapesFeatureCollection.features.push(
-        turf.lineString(coordinates, properties, options)
-      );
-    }
 
+      // Only create feature if shape / coordinates exists
+      if (coordinates) {
+        shapesFeatureCollection.features.push(
+          turf.lineString(coordinates, properties, options)
+        );
+      }
+    }
     // Remove operator source and layers if all vehicle's are inactive
     if (!Object.keys(shapes).length && map.getSource(`${operator}-shapes`)) {
       map.removeLayer(`${operator}-shapes-layer`);

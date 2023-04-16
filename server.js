@@ -27,9 +27,9 @@ app.listen(port, () => {
 
 const db = connectDB();
 
+await updatePositions(db);
 cron.schedule("*/1 * * * *", async () => {
   await updatePositions(db);
-  console.log("Updated Positions");
 });
 
 app.get("/positions", async (req, res) => {

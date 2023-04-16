@@ -28,7 +28,6 @@ function createAllTables(db) {
   createStopsTable(db);
   createTripStopsTable(db);
 }
-createAllTables(connectDB());
 
 function deleteTableData(db, table) {
   db.run(`DELETE FROM ${table}`);
@@ -230,6 +229,7 @@ async function updatePositions(db) {
       }
     }
   }
+  console.log("Updated Positions");
 }
 
 async function createTripsTable(db) {
