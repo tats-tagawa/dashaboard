@@ -136,7 +136,6 @@ async function updateShapesAndTripStops(operator, color) {
       shapeIds.push(position.properties.shapeId);
       tripIds.push(position.properties.tripId);
     }
-
     const shapesFeatureCollection = {
       type: "FeatureCollection",
       features: [],

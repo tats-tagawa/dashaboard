@@ -556,7 +556,12 @@ async function updateOperatorTripStops(db, data, operator) {
     });
   });
   try {
-    await Promise.all(promises);
+    const promiseLength = promises.length;
+    for (let i = 0; i < promiseLength; i += 1000) {
+      const request = promises.slice(i, i + 1000);
+      await Promise.all(request);
+      progress(i, promiseLength);
+    }
   } catch (error) {
     console.error(error);
   }
@@ -574,3 +579,9 @@ export {
   getAllShapeCoordinates,
   getOperatorTripStops,
 };
+
+function progress(count, length) {
+  let counter = count / length;
+  process.stdout.write(`${count} / ${length}: ${counter}\r`);
+  process.stdout.write(``);
+}
