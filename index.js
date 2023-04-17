@@ -10,9 +10,6 @@ const map = new mapboxgl.Map({
 // Currently selected operators to show on map
 const selectedOperators = [];
 
-// List of all currently active operators
-let allOperators = [];
-
 // Store setIntervals for updating vehicle positions
 let intervals = {};
 
@@ -27,6 +24,10 @@ const popup = new mapboxgl.Popup({
 
 map.on("load", async () => {
   await createMenu();
+  await updateMenu();
+  setInterval(() => {
+    updateMenu();
+  }, 60000);
 });
 
 /**
@@ -258,10 +259,9 @@ async function updateShapesAndTripStops(operator, color) {
         paint: {
           "circle-color": "#ffffff",
           "circle-radius": {
-            base: 1.5,
             stops: [
-              [9.4, 1.5],
-              [16, 7],
+              [9, 0.75],
+              [16, 6],
             ],
           },
           "circle-stroke-width": 1,
@@ -310,6 +310,17 @@ async function getOperator(operator) {
 }
 
 /**
+ * Get all operator information
+ * @param {string}
+ * @returns {object}
+ */
+async function getOperators() {
+  const response = await fetch(`http://localhost:3000/operators`);
+  const data = await response.json();
+  return data;
+}
+
+/**
  * Returns array of operators that are currently active
  * @returns array
  */
@@ -328,23 +339,32 @@ async function createMenu() {
     const form = document.createElement("form");
     form.setAttribute("id", "form");
     selection.appendChild(form);
-    allOperators = await getActiveOperators();
-    const allOperatorsSorted = allOperators.sort();
+    const allOperators = await getOperators();
+    const allOperatorsSorted = allOperators.sort((a, b) => {
+      if (a.common_name > b.common_name) return 1;
+      if (a.common_name < b.common_name) return -1;
+      return 0;
+    });
 
-    // Create checkbox for each active operator
+    // Create checkbox of all operators
     for (const operator of allOperatorsSorted) {
       const color = operator.color;
       const commonName = operator.common_name;
       const label = document.createElement("label");
       const checkbox = document.createElement("input");
-      const operatorId = operator.id;
+      let operatorId = operator.id;
       checkbox.type = "checkbox";
       checkbox.value = operatorId;
       label.appendChild(checkbox);
       label.appendChild(document.createTextNode(commonName));
-      form.appendChild(label);
-      const br = document.createElement("br");
-      form.appendChild(br);
+      const div = document.createElement("div");
+      if (operatorId === "3D") {
+        operatorId = "three-d";
+      }
+      div.setAttribute("class", operatorId);
+      div.style.display = "none";
+      form.appendChild(div);
+      div.appendChild(label);
 
       label.addEventListener("change", async (e) => {
         const checked = e.target.checked;
@@ -432,6 +452,34 @@ async function createMenu() {
     }
   } catch (error) {
     console.error(error);
+  }
+}
+
+async function updateMenu() {
+  const allOperators = await getOperators();
+  const activeOperators = await getActiveOperators();
+  const nonActiveOperators = allOperators.filter((operator) => {
+    return !activeOperators.some((active) => {
+      return operator.id === active.id;
+    });
+  });
+
+  for (const active of activeOperators) {
+    let operatorId = active.id;
+    if (operatorId === "3D") {
+      operatorId = "three-d";
+    }
+    const operatorEl = document.querySelector(`.${operatorId}`);
+    operatorEl.style.display = "block";
+  }
+
+  for (const nonActive of nonActiveOperators) {
+    let operatorId = nonActive.id;
+    if (operatorId === "3D") {
+      operatorId = "three-d";
+    }
+    const operatorEl = document.querySelector(`.${operatorId}`);
+    operatorEl.style.display = "none";
   }
 }
 
