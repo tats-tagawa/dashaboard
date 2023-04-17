@@ -31,6 +31,84 @@ map.on("load", async () => {
 });
 
 /**
+ * Get specified operator information
+ * @param {string} operator - operator's code name
+ * @returns {object}
+ */
+async function getOperator(operator) {
+  const response = await fetch(
+    `http://localhost:3000/operator?operator=${operator}`
+  );
+  const data = await response.json();
+  return data[0];
+}
+
+/**
+ * Get all operator information
+ * @param {string}
+ * @returns {object}
+ */
+async function getOperators() {
+  const response = await fetch(`http://localhost:3000/operators`);
+  const data = await response.json();
+  return data;
+}
+
+/**
+ * Returns array of operators that are currently active
+ * @returns array
+ */
+async function getActiveOperators() {
+  const response = await fetch(`http://localhost:3000/active-operators`);
+  const data = await response.json();
+  return data;
+}
+
+/**
+ * Retrieve current vehicle positions and update to GeoJSON
+ * @param {string} operator - operator code name
+ * @returns {object} GeoJSON object of all vehicle positions
+ */
+async function getPositions(operator) {
+  try {
+    const response = await fetch(
+      `http://localhost:3000/positions?operator=${operator}`
+    );
+    const positions = await response.json();
+    const operatorGeneralInfo = await getOperator(operator);
+    const operatorName = operatorGeneralInfo.name;
+
+    // Store all positions as GeoJSON
+    const positionFeatures = [];
+    for (const position of positions) {
+      const coordinates = [position.longitude, position.latitude];
+      positionFeatures.push({
+        type: "Feature",
+        properties: {
+          operator: position.operator,
+          operatorName: operatorName,
+          tripId: position.trip_id,
+          shapeId: position.shape_id,
+          routeId: position.route_id,
+          vehicleId: position.vehicle_id,
+          coordinates: coordinates,
+          directionId: position.direction_id,
+          bearing: position.bearing,
+          speed: position.speed,
+        },
+        geometry: {
+          type: "Point",
+          coordinates: coordinates,
+        },
+      });
+    }
+    return positionFeatures;
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+/**
  * Create and add vehicle position and route layers for
  * specified operator.
  * @param {object} map Object
@@ -79,47 +157,48 @@ async function updatePositions(operator, color) {
 }
 
 /**
- * Retrive current vehicle positions and update to GeoJSON
+ * Get coordinates for all specified shapes
  * @param {string} operator - operator code name
- * @returns {object} GeoJSON object of all vehicle positions
+ * @param {array} shapeIds - array with shape ids
+ * @returns
  */
-async function getPositions(operator) {
-  try {
-    const response = await fetch(
-      `http://localhost:3000/positions?operator=${operator}`
-    );
-    const positions = await response.json();
-    const operatorGeneralInfo = await getOperator(operator);
-    const operatorName = operatorGeneralInfo.name;
+async function getAllShapeCoordinates(operator, shapeIds) {
+  const options = {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      operator: operator,
+      shapeIds: shapeIds,
+    }),
+  };
+  const response = await fetch("http://localhost:3000/shapes", options);
+  const data = await response.json();
+  return data;
+}
 
-    // Store all positions as GeoJSON
-    const positionFeatures = [];
-    for (const position of positions) {
-      const coordinates = [position.longitude, position.latitude];
-      positionFeatures.push({
-        type: "Feature",
-        properties: {
-          operator: position.operator,
-          operatorName: operatorName,
-          tripId: position.trip_id,
-          shapeId: position.shape_id,
-          routeId: position.route_id,
-          vehicleId: position.vehicle_id,
-          coordinates: coordinates,
-          directionId: position.direction_id,
-          bearing: position.bearing,
-          speed: position.speed,
-        },
-        geometry: {
-          type: "Point",
-          coordinates: coordinates,
-        },
-      });
-    }
-    return positionFeatures;
-  } catch (error) {
-    console.error(error);
-  }
+
+/**
+ * Return all transit stations on active lines for operator
+ * @param {string} operator 
+ * @param {array} tripIds 
+ * @returns array
+ */
+async function getOperatorTripStops(operator, tripIds) {
+  const options = {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      operator: operator,
+      tripIds: tripIds,
+    }),
+  };
+  const response = await fetch("http://localhost:3000/trip-stops", options);
+  const data = await response.json();
+  return data;
 }
 
 /**
@@ -275,62 +354,6 @@ async function updateShapesAndTripStops(operator, color) {
 }
 
 /**
- * Get coordinates for all specified shapes
- * @param {string} operator - operator code name
- * @param {array} shapeIds - array with shape ids
- * @returns
- */
-async function getAllShapeCoordinates(operator, shapeIds) {
-  const options = {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      operator: operator,
-      shapeIds: shapeIds,
-    }),
-  };
-  const response = await fetch("http://localhost:3000/shapes", options);
-  const data = await response.json();
-  return data;
-}
-
-/**
- * Get specified operator information
- * @param {string} operator - operator's code name
- * @returns {object}
- */
-async function getOperator(operator) {
-  const response = await fetch(
-    `http://localhost:3000/operator?operator=${operator}`
-  );
-  const data = await response.json();
-  return data[0];
-}
-
-/**
- * Get all operator information
- * @param {string}
- * @returns {object}
- */
-async function getOperators() {
-  const response = await fetch(`http://localhost:3000/operators`);
-  const data = await response.json();
-  return data;
-}
-
-/**
- * Returns array of operators that are currently active
- * @returns array
- */
-async function getActiveOperators() {
-  const response = await fetch(`http://localhost:3000/active-operators`);
-  const data = await response.json();
-  return data;
-}
-
-/**
  * Create menu for users to select operator to show on map
  */
 async function createMenu() {
@@ -455,6 +478,9 @@ async function createMenu() {
   }
 }
 
+/**
+ * Update list of operators to show/remove operators which became active/inactive
+ */
 async function updateMenu() {
   const allOperators = await getOperators();
   const activeOperators = await getActiveOperators();
@@ -521,7 +547,7 @@ function enterPositionsHoverEvent(e) {
 }
 
 /**
- * Hide pop-up with vehicle information and highlight route when mouse leaves
+ * remove pop-up with vehicle information and highlighted route when mouse leaves
  */
 function leavePositionsHoverEvent() {
   map.getCanvas().style.cursor = "";
@@ -539,6 +565,10 @@ function leavePositionsHoverEvent() {
   hoverSource = null;
 }
 
+/**
+ * Show transit station name when hovered over
+ * @param {event} e 
+ */
 function enterTripStopsHoverEvent(e) {
   map.getCanvas().style.cursor = "pointer";
   const properties = e.features[0].properties;
@@ -550,23 +580,10 @@ function enterTripStopsHoverEvent(e) {
     .addTo(map);
 }
 
+/**
+ * Remove transit station name when mouse leaves
+ */
 function leaveTripStopHoverEvent() {
   map.getCanvas().style.cursor = "";
   popup.remove();
-}
-
-async function getOperatorTripStops(operator, tripIds) {
-  const options = {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      operator: operator,
-      tripIds: tripIds,
-    }),
-  };
-  const response = await fetch("http://localhost:3000/trip-stops", options);
-  const data = await response.json();
-  return data;
 }
