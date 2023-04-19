@@ -82,3 +82,9 @@ app.post("/trip-stops", async (req, res) => {
   const data = await getOperatorTripStops(db, operator, tripIds);
   res.send(data);
 });
+
+app.get("/trip-updates", async (req, res) => {
+  const operator = req.query.operator;
+  /* TO ADD */
+  res.send(data);
+});

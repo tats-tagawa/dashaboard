@@ -6,6 +6,7 @@ import {
   getOperatorColors,
   getOperatorCommonNames,
   getVehiclePositions,
+  getOperatorTripUpdates,
   getOperatorGTFSDataFeed,
 } from "./transit-data.js";
 
@@ -27,6 +28,7 @@ function createAllTables(db) {
   createShapesTable(db);
   createStopsTable(db);
   createTripStopsTable(db);
+  createTripUpdatesTable(db);
 }
 
 function deleteTableData(db, table) {
@@ -566,6 +568,14 @@ async function updateOperatorTripStops(db, data, operator) {
     console.error(error);
   }
   return `Updated ${operator} Trip Stops`;
+}
+
+async function createTripUpdatesTable(db) {
+  db.run(`
+  CREATE TABLE IF NOT EXISTS trip_updates
+    (
+      operator TEXT,
+    )`);
 }
 
 export {
