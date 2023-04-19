@@ -22,6 +22,10 @@ async function getOperatorsTransitData() {
   }
 }
 
+/**
+ * returns each operator's main color as hex
+ * @returns {object}
+ */
 function getOperatorColors() {
   return {
     "3D": "#3D8A4C",
@@ -63,6 +67,10 @@ function getOperatorColors() {
   };
 }
 
+/**
+ * returns shorter name for each operator
+ * @returns {object}
+ */
 function getOperatorCommonNames() {
   return {
     "3D": "Tri Delta Transit",
@@ -106,7 +114,6 @@ function getOperatorCommonNames() {
 
 /**
  * Get realtime vehicle location data
- *
  * @param {string} operator=RG - operator's code name
  * @returns {object} JSON object
  */
@@ -145,6 +152,12 @@ async function getTripUpdates(operator = "RG") {
   }
 }
 
+/**
+ * Get all information from GTFS Data Feed for an operator.
+ * Each file is stored in each index
+ * @param {string} operator 
+ * @returns {array} 
+ */
 async function getOperatorGTFSDataFeed(operator) {
   try {
     console.log(`Downloading ${operator} GTFS Data`);
