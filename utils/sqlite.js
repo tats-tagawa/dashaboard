@@ -90,65 +90,77 @@ async function updateOperators(db) {
   deleteTableData(db, "operators");
   const colors = getOperatorColors();
   const commonName = getOperatorCommonNames();
-  const operators = await getOperatorsTransitData();
-  for (const operator of operators) {
-    if (operator.Id !== "RG") {
-      const operatorData = [
-        operator.Id,
-        operator.Name,
-        commonName[operator.Id],
-        colors[operator.Id],
-      ];
-      db.run(
-        "INSERT INTO operators(id, name, common_name, color) VALUES (?, ?, ?, ?)",
-        operatorData,
-        (error) => {
-          if (error) {
-            console.error(error.message);
+  try {
+    const operators = await getOperatorsTransitData();
+    for (const operator of operators) {
+      if (operator.Id !== "RG") {
+        const operatorData = [
+          operator.Id,
+          operator.Name,
+          commonName[operator.Id],
+          colors[operator.Id],
+        ];
+        db.run(
+          "INSERT INTO operators(id, name, common_name, color) VALUES (?, ?, ?, ?)",
+          operatorData,
+          (error) => {
+            if (error) {
+              console.error(error.message);
+            }
           }
-        }
-      );
+        );
+      }
     }
+    console.log("Updated Operators List");
+  } catch (error) {
+    console.error(error);
   }
-  console.log("Updated Operators List");
 }
 
 async function updateOperatorDataTable(db, operator) {
   console.log(`Updating ${operator} Data Table`);
-  const operatorData = await getOperatorGTFSDataFeed(operator);
-  for await (const data of operatorData) {
-    if (data[0] === "shapes") {
-      console.log(`Updating ${operator} Shapes`);
-      const status = await updateOperatorShapes(db, data[2], operator);
-      console.log(status);
+  try {
+    const operatorData = await getOperatorGTFSDataFeed(operator);
+    for await (const data of operatorData) {
+      if (data[0] === "shapes") {
+        console.log(`Updating ${operator} Shapes`);
+        const status = await updateOperatorShapes(db, data[2], operator);
+        console.log(status);
+      }
+      if (data[0] === "trips") {
+        console.log(`Updating ${operator} Trips`);
+        const status = await updateOperatorTrips(db, data[2], operator);
+        console.log(status);
+      }
+      if (data[0] === "stops") {
+        console.log(`Updating ${operator} Stops`);
+        const status = await updateOperatorStops(db, data[2], operator);
+        console.log(status);
+      }
+      if (data[0] === "stop_times") {
+        console.log(`Updating ${operator} Trip Stops`);
+        const status = await updateOperatorTripStops(db, data[2], operator);
+        console.log(status);
+      }
     }
-    if (data[0] === "trips") {
-      console.log(`Updating ${operator} Trips`);
-      const status = await updateOperatorTrips(db, data[2], operator);
-      console.log(status);
-    }
-    if (data[0] === "stops") {
-      console.log(`Updating ${operator} Stops`);
-      const status = await updateOperatorStops(db, data[2], operator);
-      console.log(status);
-    }
-    if (data[0] === "stop_times") {
-      console.log(`Updating ${operator} Trip Stops`);
-      const status = await updateOperatorTripStops(db, data[2], operator);
-      console.log(status);
-    }
+    console.log(`Updated ${operator} Data Table`);
+  } catch (error) {
+    console.error(error);
   }
-  console.log(`Updated ${operator} Data Table`);
 }
 
 async function updateAllOperators(db) {
-  await updateOperators(db);
-  const operators = await getOperators(db);
-  for (const operator of operators) {
-    console.log(`Updating ${operator.id} ------`);
-    await updateOperatorDataTable(db, operator.id);
+  try {
+    await updateOperators(db);
+    const operators = await getOperators(db);
+    for (const operator of operators) {
+      console.log(`Updating ${operator.id} ------`);
+      await updateOperatorDataTable(db, operator.id);
+    }
+    console.log("Updated All");
+  } catch (error) {
+    console.error(error);
   }
-  console.log("Updated All");
 }
 
 async function createPositionsTable(db) {
@@ -190,46 +202,50 @@ function getPositions(db, operator) {
 async function updatePositions(db) {
   console.log("Updating Positions");
   deleteTableData(db, "positions");
-  const positions = await getVehiclePositions();
-  for (const position of positions) {
-    if (position.vehicle.trip) {
-      const [operator, tripId] = position.vehicle.trip.tripId.split(":");
-      const [_, routeId] = position.vehicle.trip.routeId.split(":");
-      try {
-        let shapeId = await getTripShapeId(db, operator, tripId);
-        if (shapeId) {
-          shapeId = shapeId.shape_id;
-        } else {
-          shapeId = null;
-        }
-        const data = [
-          `${position.vehicle.trip.tripId}:${position.vehicle.vehicle.id}`,
-          operator,
-          tripId,
-          shapeId,
-          position.vehicle.vehicle.id,
-          routeId,
-          position.vehicle.trip.directionId,
-          position.vehicle.position.latitude,
-          position.vehicle.position.longitude,
-          position.vehicle.position.bearing,
-          position.vehicle.position.speed,
-        ];
-        const query = `
+  try {
+    const positions = await getVehiclePositions();
+    for (const position of positions) {
+      if (position.vehicle.trip) {
+        const [operator, tripId] = position.vehicle.trip.tripId.split(":");
+        const [_, routeId] = position.vehicle.trip.routeId.split(":");
+        try {
+          let shapeId = await getTripShapeId(db, operator, tripId);
+          if (shapeId) {
+            shapeId = shapeId.shape_id;
+          } else {
+            shapeId = null;
+          }
+          const data = [
+            `${position.vehicle.trip.tripId}:${position.vehicle.vehicle.id}`,
+            operator,
+            tripId,
+            shapeId,
+            position.vehicle.vehicle.id,
+            routeId,
+            position.vehicle.trip.directionId,
+            position.vehicle.position.latitude,
+            position.vehicle.position.longitude,
+            position.vehicle.position.bearing,
+            position.vehicle.position.speed,
+          ];
+          const query = `
         INSERT INTO positions
           (id, operator, trip_id, shape_id, vehicle_id, route_id, direction_id, latitude, longitude, bearing, speed)
         VALUES
           (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
-        db.run(query, data, (err) => {
-          if (err) console.error(err);
-        });
-      } catch (error) {
-        console.error(error);
+          db.run(query, data, (err) => {
+            if (err) console.error(err);
+          });
+        } catch (error) {
+          console.error(error);
+        }
       }
     }
+    console.log("Updated Positions");
+  } catch (error) {
+    console.error(error);
   }
-  console.log("Updated Positions");
 }
 
 async function createTripsTable(db) {
