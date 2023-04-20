@@ -372,8 +372,8 @@ async function updateShapesAndTripStops(operator, color) {
           "circle-color": "#ffffff",
           "circle-radius": {
             stops: [
-              [9, 0.75],
-              [16, 6],
+              [9.4, 0.6],
+              [16, 5],
             ],
           },
           "circle-stroke-width": 1,
