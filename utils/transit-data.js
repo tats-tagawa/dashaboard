@@ -1,15 +1,9 @@
-import fs from "fs";
 import axios from "axios";
 import GtfsRealtimeBindings from "gtfs-realtime-bindings";
-import { fileURLToPath } from "url";
-import path from "path";
 import * as dotenv from "dotenv";
 dotenv.config();
 import JSZip from "jszip";
 import { Writable } from "stream";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 async function getOperatorsTransitData() {
   try {
