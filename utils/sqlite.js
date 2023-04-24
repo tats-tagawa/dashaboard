@@ -10,6 +10,10 @@ import {
   getOperatorGTFSDataFeed,
 } from "./transit-data.js";
 
+/**
+ * Connect to sqlite database
+ * @returns {object} database object
+ */
 function connectDB() {
   const db = new sqlite3.Database("dashaboard.db", (error) => {
     if (error) {
@@ -21,6 +25,10 @@ function connectDB() {
   return db;
 }
 
+/**
+ * Create all tables necessary
+ * @param {object} db 
+ */
 function createAllTables(db) {
   createOperatorsTable(db);
   createTripsTable(db);
@@ -31,10 +39,19 @@ function createAllTables(db) {
   createTripUpdatesTable(db);
 }
 
+/**
+ * Delete existing data from table to update with live data
+ * @param {object} db 
+ * @param {string} table name
+ */
 function deleteTableData(db, table) {
   db.run(`DELETE FROM ${table}`);
 }
 
+/**
+ * Create table for list of operators 
+ * @param {object} db 
+ */
 function createOperatorsTable(db) {
   db.run(`
   CREATE TABLE IF NOT EXISTS operators
@@ -47,6 +64,11 @@ function createOperatorsTable(db) {
   `);
 }
 
+/**
+ * Get list of operators and their general information
+ * @param {object} db 
+ * @returns {array} 
+ */
 function getOperators(db) {
   return new Promise((resolve, reject) => {
     let query;
@@ -61,6 +83,12 @@ function getOperators(db) {
   });
 }
 
+/**
+ * Get general information for a single operator
+ * @param {object} db 
+ * @param {string} operator 
+ * @returns {array} 
+ */
 function getOperator(db, operator) {
   return new Promise((resolve, reject) => {
     let query;
@@ -75,6 +103,11 @@ function getOperator(db, operator) {
   });
 }
 
+/**
+ * Get list of operators with vehicles in service
+ * @param {object} db 
+ * @returns {array}
+ */
 function getActiveOperators(db) {
   return new Promise((resolve, reject) => {
     let query = `SELECT * FROM operators WHERE id IN (SELECT DISTINCT operator FROM positions) ORDER BY common_name`;
@@ -88,71 +121,102 @@ function getActiveOperators(db) {
   });
 }
 
+/**
+ * Update operator table with data from 511.org
+ * @param {object} db 
+ */
 async function updateOperators(db) {
   deleteTableData(db, "operators");
   const colors = getOperatorColors();
   const commonName = getOperatorCommonNames();
-  const operators = await getOperatorsTransitData();
-  for (const operator of operators) {
-    if (operator.Id !== "RG") {
-      const operatorData = [
-        operator.Id,
-        operator.Name,
-        commonName[operator.Id],
-        colors[operator.Id],
-      ];
-      db.run(
-        "INSERT INTO operators(id, name, common_name, color) VALUES (?, ?, ?, ?)",
-        operatorData,
-        (error) => {
-          if (error) {
-            console.error(error.message);
+  try {
+    const operators = await getOperatorsTransitData();
+    for (const operator of operators) {
+      if (operator.Id !== "RG") {
+        const operatorData = [
+          operator.Id,
+          operator.Name,
+          commonName[operator.Id],
+          colors[operator.Id],
+        ];
+        db.run(
+          "INSERT INTO operators(id, name, common_name, color) VALUES (?, ?, ?, ?)",
+          operatorData,
+          (error) => {
+            if (error) {
+              console.error(error.message);
+            }
           }
-        }
-      );
+        );
+      }
     }
+    console.log("Updated Operators List");
+  } catch (error) {
+    console.error(error);
   }
-  console.log("Updated Operators List");
 }
 
+/**
+ * Update all data tables for a single operator
+ * These are data that does not require frequent updates (transit stops, route shapes) unlike positions data
+ * @param {object} db 
+ * @param {string} operator 
+ */
 async function updateOperatorDataTable(db, operator) {
   console.log(`Updating ${operator} Data Table`);
-  const operatorData = await getOperatorGTFSDataFeed(operator);
-  for await (const data of operatorData) {
-    if (data[0] === "shapes") {
-      console.log(`Updating ${operator} Shapes`);
-      const status = await updateOperatorShapes(db, data[2], operator);
-      console.log(status);
+  try {
+    const operatorData = await getOperatorGTFSDataFeed(operator);
+    for await (const data of operatorData) {
+      if (data[0] === "shapes") {
+        console.log(`Updating ${operator} Shapes`);
+        const status = await updateOperatorShapes(db, data[2], operator);
+        console.log(status);
+      }
+      if (data[0] === "trips") {
+        console.log(`Updating ${operator} Trips`);
+        const status = await updateOperatorTrips(db, data[2], operator);
+        console.log(status);
+      }
+      if (data[0] === "stops") {
+        console.log(`Updating ${operator} Stops`);
+        const status = await updateOperatorStops(db, data[2], operator);
+        console.log(status);
+      }
+      if (data[0] === "stop_times") {
+        console.log(`Updating ${operator} Trip Stops`);
+        const status = await updateOperatorTripStops(db, data[2], operator);
+        console.log(status);
+      }
     }
-    if (data[0] === "trips") {
-      console.log(`Updating ${operator} Trips`);
-      const status = await updateOperatorTrips(db, data[2], operator);
-      console.log(status);
-    }
-    if (data[0] === "stops") {
-      console.log(`Updating ${operator} Stops`);
-      const status = await updateOperatorStops(db, data[2], operator);
-      console.log(status);
-    }
-    if (data[0] === "stop_times") {
-      console.log(`Updating ${operator} Trip Stops`);
-      const status = await updateOperatorTripStops(db, data[2], operator);
-      console.log(status);
-    }
+    console.log(`Updated ${operator} Data Table`);
+  } catch (error) {
+    console.error(error);
   }
-  console.log(`Updated ${operator} Data Table`);
 }
 
+/**
+ * Update all data tables for all operators
+ * Warning: May require > 10 mins to complete running
+ * @param {object} db 
+ */
 async function updateAllOperators(db) {
-  await updateOperators(db);
-  const operators = await getOperators(db);
-  for (const operator of operators) {
-    console.log(`Updating ${operator.id} ------`);
-    await updateOperatorDataTable(db, operator.id);
+  try {
+    await updateOperators(db);
+    const operators = await getOperators(db);
+    for (const operator of operators) {
+      console.log(`Updating ${operator.id} ------`);
+      await updateOperatorDataTable(db, operator.id);
+    }
+    console.log("Updated All");
+  } catch (error) {
+    console.error(error);
   }
-  console.log("Updated All");
 }
 
+/**
+ * Create table for positions of transit vehicles in service
+ * @param {object} db 
+ */
 async function createPositionsTable(db) {
   db.run(`
     CREATE TABLE IF NOT EXISTS positions
@@ -171,6 +235,12 @@ async function createPositionsTable(db) {
     )`);
 }
 
+/**
+ * Get positions of all transit vehicles in service for a operator
+ * @param {object} db 
+ * @param {string} operator 
+ * @returns {array} 
+ */
 function getPositions(db, operator) {
   return new Promise((resolve, reject) => {
     let query;
@@ -189,51 +259,63 @@ function getPositions(db, operator) {
   });
 }
 
+/**
+ * Update position table with most recent position information
+ * @param {object} db 
+ */
 async function updatePositions(db) {
   console.log("Updating Positions");
   deleteTableData(db, "positions");
-  const positions = await getVehiclePositions();
-  for (const position of positions) {
-    if (position.vehicle.trip) {
-      const [operator, tripId] = position.vehicle.trip.tripId.split(":");
-      const [_, routeId] = position.vehicle.trip.routeId.split(":");
-      try {
-        let shapeId = await getTripShapeId(db, operator, tripId);
-        if (shapeId) {
-          shapeId = shapeId.shape_id;
-        } else {
-          shapeId = null;
-        }
-        const data = [
-          `${position.vehicle.trip.tripId}:${position.vehicle.vehicle.id}`,
-          operator,
-          tripId,
-          shapeId,
-          position.vehicle.vehicle.id,
-          routeId,
-          position.vehicle.trip.directionId,
-          position.vehicle.position.latitude,
-          position.vehicle.position.longitude,
-          position.vehicle.position.bearing,
-          position.vehicle.position.speed,
-        ];
-        const query = `
+  try {
+    const positions = await getVehiclePositions();
+    for (const position of positions) {
+      if (position.vehicle.trip) {
+        const [operator, tripId] = position.vehicle.trip.tripId.split(":");
+        const [_, routeId] = position.vehicle.trip.routeId.split(":");
+        try {
+          let shapeId = await getTripShapeId(db, operator, tripId);
+          if (shapeId) {
+            shapeId = shapeId.shape_id;
+          } else {
+            shapeId = null;
+          }
+          const data = [
+            `${position.vehicle.trip.tripId}:${position.vehicle.vehicle.id}`,
+            operator,
+            tripId,
+            shapeId,
+            position.vehicle.vehicle.id,
+            routeId,
+            position.vehicle.trip.directionId,
+            position.vehicle.position.latitude,
+            position.vehicle.position.longitude,
+            position.vehicle.position.bearing,
+            position.vehicle.position.speed,
+          ];
+          const query = `
         INSERT INTO positions
           (id, operator, trip_id, shape_id, vehicle_id, route_id, direction_id, latitude, longitude, bearing, speed)
         VALUES
           (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
-        db.run(query, data, (err) => {
-          if (err) console.error(err);
-        });
-      } catch (error) {
-        console.error(error);
+          db.run(query, data, (err) => {
+            if (err) console.error(err);
+          });
+        } catch (error) {
+          console.error(error);
+        }
       }
     }
+    console.log("Updated Positions");
+  } catch (error) {
+    console.error(error);
   }
-  console.log("Updated Positions");
 }
 
+/**
+ * Create table for trip information for each transit service
+ * @param {object} db 
+ */
 async function createTripsTable(db) {
   db.run(`
     CREATE TABLE IF NOT EXISTS trips
@@ -253,6 +335,13 @@ async function createTripsTable(db) {
   `);
 }
 
+/**
+ * Update trips table with all scheduled trips for an operator
+ * @param {object} db 
+ * @param {array} data 
+ * @param {string} operator 
+ * @returns 
+ */
 async function updateOperatorTrips(db, data, operator) {
   db.run(`DELETE FROM trips WHERE operator='${operator}'`);
   let rows = data.split("\r\n");
@@ -290,6 +379,10 @@ async function updateOperatorTrips(db, data, operator) {
   return `Updated ${operator} Trips`;
 }
 
+/**
+ * Create table for shape coordinates 
+ * @param {object} db 
+ */
 async function createShapesTable(db) {
   db.run(`
     CREATE TABLE IF NOT EXISTS shapes
@@ -303,6 +396,13 @@ async function createShapesTable(db) {
       )`);
 }
 
+/**
+ * Update table with with the coordinates of each shape for an operator
+ * @param {object} db 
+ * @param {array} data
+ * @param {*} operator 
+ * @returns {string}
+ */
 async function updateOperatorShapes(db, data, operator) {
   db.run(`DELETE FROM shapes WHERE operator='${operator}'`);
   let rows = data.split("\r\n");
@@ -334,6 +434,13 @@ async function updateOperatorShapes(db, data, operator) {
   return `Updated ${operator} Shapes`;
 }
 
+/**
+ * Get shape ID of the provided trip ID
+ * @param {object} db 
+ * @param {string} operator 
+ * @param {string} trip ID
+ * @returns {array} shape IDs
+ */
 async function getTripShapeId(db, operator, tripId) {
   return new Promise((resolve, reject) => {
     const query = `
@@ -352,21 +459,13 @@ async function getTripShapeId(db, operator, tripId) {
   });
 }
 
-async function getShapeIds(db, operator) {
-  return new Promise((resolve, reject) => {
-    const query = `SELECT DISTINCT shape_id FROM shapes WHERE operator='${operator}'`;
-    db.all(query, (error, rows) => {
-      if (error) {
-        reject(error);
-      }
-      rows = rows.map((obj) => {
-        return obj.shape_id;
-      });
-      resolve(rows);
-    });
-  });
-}
-
+/**
+ * Get coordinates of the provided shape ID
+ * @param {object} db 
+ * @param {string} operator 
+ * @param {string} shape ID 
+ * @returns {array} coordinates for the shape ID
+ */
 async function getShapeCoordinates(db, operator, shapeId) {
   return new Promise((resolve, reject) => {
     const query = `SELECT shape_pt_lon, shape_pt_lat FROM shapes WHERE operator='${operator}' AND shape_id='${shapeId}' ORDER BY shape_pt_sequence`;
@@ -382,6 +481,13 @@ async function getShapeCoordinates(db, operator, shapeId) {
   });
 }
 
+/**
+ * Get coordinates for all the provided shape IDs
+ * @param {object} db 
+ * @param {string} operator 
+ * @param {array} shape IDs 
+ * @returns {object} key - shapeId, value - array of coordinates
+ */
 async function getAllShapeCoordinates(db, operator, shapeIds) {
   return new Promise((resolve, reject) => {
     const shapeIdsProcessed = shapeIds.map((shapeId) => `'${shapeId}'`);
@@ -389,7 +495,7 @@ async function getAllShapeCoordinates(db, operator, shapeIds) {
     db.all(query, (error, data) => {
       if (error) reject(error);
 
-      // acc: object with shape coordinates {shapeId: coordinates}
+      // acc: object with shape coordinates {shapeId: [coordinates]}
       const shapes = data.reduce(
         (acc, { shape_id, shape_pt_lon, shape_pt_lat }) => {
           if (!acc[shape_id]) {
@@ -405,6 +511,10 @@ async function getAllShapeCoordinates(db, operator, shapeIds) {
   });
 }
 
+/**
+ * Create table for stops (station) information for all operators
+ * @param {object} db 
+ */
 async function createStopsTable(db) {
   db.run(`
     CREATE TABLE IF NOT EXISTS stops
@@ -426,17 +536,13 @@ async function createStopsTable(db) {
       )`);
 }
 
-async function getOperatorTripStops(db, operator, tripIds) {
-  return new Promise((resolve, reject) => {
-    const tripIdsProcessed = tripIds.map((tripId) => `'${tripId}'`);
-    const query = `SELECT * FROM stops WHERE stop_id IN (SELECT DISTINCT stop_id FROM trip_stops WHERE operator='${operator}' AND trip_id IN (${tripIdsProcessed}))`;
-    db.all(query, (error, data) => {
-      if (error) reject(error);
-      resolve(data);
-    });
-  });
-}
-
+/**
+ * Update table with all stops for the operator
+ * @param {object} db 
+ * @param {array} data 
+ * @param {string} operator 
+ * @returns {string}
+ */
 async function updateOperatorStops(db, data, operator) {
   await db.run(`DELETE FROM stops WHERE operator='${operator}'`);
   let rows = data.split("\r\n");
@@ -493,6 +599,10 @@ async function updateOperatorStops(db, data, operator) {
   return `Updated ${operator} Stops`;
 }
 
+/**
+ * Create table for trip stops information
+ * @param {object} db 
+ */
 async function createTripStopsTable(db) {
   db.run(`
     CREATE TABLE IF NOT EXISTS trip_stops
@@ -511,6 +621,31 @@ async function createTripStopsTable(db) {
       )`);
 }
 
+/**
+ * Get all trip stops that will be made for each trip ID
+ * @param {object} db 
+ * @param {string} operator 
+ * @param {array} tripIds 
+ * @returns {array}
+ */
+async function getOperatorTripStops(db, operator, tripIds) {
+  return new Promise((resolve, reject) => {
+    const tripIdsProcessed = tripIds.map((tripId) => `'${tripId}'`);
+    const query = `SELECT * FROM stops WHERE stop_id IN (SELECT DISTINCT stop_id FROM trip_stops WHERE operator='${operator}' AND trip_id IN (${tripIdsProcessed}))`;
+    db.all(query, (error, data) => {
+      if (error) reject(error);
+      resolve(data);
+    });
+  });
+}
+
+/**
+ * Update trip stops data for an operator
+ * @param {object} db 
+ * @param {array} data 
+ * @param {string} operator 
+ * @returns {string}
+ */
 async function updateOperatorTripStops(db, data, operator) {
   await db.run(`DELETE FROM trip_stops WHERE operator='${operator}'`);
   let rows = data.split("\r\n");
@@ -590,6 +725,11 @@ export {
   getOperatorTripStops,
 };
 
+/**
+ * Show progress of how much data has been processed.
+ * @param {int} count 
+ * @param {int} length 
+ */
 function progress(count, length) {
   let counter = count / length;
   process.stdout.write(`${count} / ${length}: ${counter}\r`);

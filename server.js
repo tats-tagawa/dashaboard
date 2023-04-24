@@ -27,9 +27,17 @@ app.listen(port, () => {
 
 const db = connectDB();
 
-await updatePositions(db);
-cron.schedule("*/1 * * * *", async () => {
+try {
   await updatePositions(db);
+} catch (error) {
+  console.error(error);
+}
+cron.schedule("*/1 * * * *", async () => {
+  try {
+    await updatePositions(db);
+  } catch (error) {
+    console.error(error);
+  }
 });
 
 app.get("/positions", async (req, res) => {
@@ -55,32 +63,52 @@ app.get("/shapes", async (req, res) => {
 });
 
 app.get("/operators", async (req, res) => {
-  const data = await getOperators(db);
-  res.send(data);
+  try {
+    const data = await getOperators(db);
+    res.send(data);
+  } catch (error) {
+    console.error(error);
+  }
 });
 
 app.get("/operator", async (req, res) => {
-  const data = await getOperator(db, req.query.operator);
-  res.send(data);
+  try {
+    const data = await getOperator(db, req.query.operator);
+    res.send(data);
+  } catch (error) {
+    console.error(error);
+  }
 });
 
 app.get("/active-operators", async (req, res) => {
-  const data = await getActiveOperators(db);
-  res.send(data);
+  try {
+    const data = await getActiveOperators(db);
+    res.send(data);
+  } catch (error) {
+    console.error(error);
+  }
 });
 
 app.post("/shapes", async (req, res) => {
   const operator = req.body.operator;
   const shapeIds = req.body.shapeIds;
-  const data = await getAllShapeCoordinates(db, operator, shapeIds);
-  res.send(data);
+  try {
+    const data = await getAllShapeCoordinates(db, operator, shapeIds);
+    res.send(data);
+  } catch (error) {
+    console.error(error);
+  }
 });
 
 app.post("/trip-stops", async (req, res) => {
   const operator = req.body.operator;
   const tripIds = req.body.tripIds;
-  const data = await getOperatorTripStops(db, operator, tripIds);
-  res.send(data);
+  try {
+    const data = await getOperatorTripStops(db, operator, tripIds);
+    res.send(data);
+  } catch (error) {
+    console.error(error);
+  }
 });
 
 app.get("/trip-updates", async (req, res) => {

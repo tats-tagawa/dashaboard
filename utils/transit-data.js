@@ -1,15 +1,9 @@
-import fs from "fs";
 import axios from "axios";
 import GtfsRealtimeBindings from "gtfs-realtime-bindings";
-import { fileURLToPath } from "url";
-import path from "path";
 import * as dotenv from "dotenv";
 dotenv.config();
 import JSZip from "jszip";
 import { Writable } from "stream";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 async function getOperatorsTransitData() {
   try {
@@ -22,6 +16,10 @@ async function getOperatorsTransitData() {
   }
 }
 
+/**
+ * returns each operator's main color as hex
+ * @returns {object}
+ */
 function getOperatorColors() {
   return {
     "3D": "#3D8A4C",
@@ -63,6 +61,10 @@ function getOperatorColors() {
   };
 }
 
+/**
+ * returns shorter name for each operator
+ * @returns {object}
+ */
 function getOperatorCommonNames() {
   return {
     "3D": "Tri Delta Transit",
@@ -106,7 +108,6 @@ function getOperatorCommonNames() {
 
 /**
  * Get realtime vehicle location data
- *
  * @param {string} operator=RG - operator's code name
  * @returns {object} JSON object
  */
@@ -145,6 +146,12 @@ async function getOperatorTripUpdates(operator) {
   }
 }
 
+/**
+ * Get all information from GTFS Data Feed for an operator.
+ * Each file is stored in each index
+ * @param {string} operator 
+ * @returns {array} 
+ */
 async function getOperatorGTFSDataFeed(operator) {
   try {
     console.log(`Downloading ${operator} GTFS Data`);

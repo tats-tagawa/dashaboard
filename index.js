@@ -23,10 +23,18 @@ const popup = new mapboxgl.Popup({
 });
 
 map.on("load", async () => {
-  await createMenu();
-  await updateMenu();
+  try {
+    await createMenu();
+    await updateMenu();
+  } catch (error) {
+    console.error(error);
+  }
   setInterval(() => {
-    updateMenu();
+    try {
+      updateMenu();
+    } catch (error) {
+      console.error(error);
+    }
   }, 60000);
 });
 
@@ -36,11 +44,15 @@ map.on("load", async () => {
  * @returns {object}
  */
 async function getOperator(operator) {
-  const response = await fetch(
-    `http://localhost:3000/operator?operator=${operator}`
-  );
-  const data = await response.json();
-  return data[0];
+  try {
+    const response = await fetch(
+      `http://localhost:3000/operator?operator=${operator}`
+    );
+    const data = await response.json();
+    return data[0];
+  } catch (error) {
+    console.error(error);
+  }
 }
 
 /**
@@ -49,9 +61,13 @@ async function getOperator(operator) {
  * @returns {object}
  */
 async function getOperators() {
-  const response = await fetch(`http://localhost:3000/operators`);
-  const data = await response.json();
-  return data;
+  try {
+    const response = await fetch(`http://localhost:3000/operators`);
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error(error);
+  }
 }
 
 /**
@@ -59,9 +75,13 @@ async function getOperators() {
  * @returns array
  */
 async function getActiveOperators() {
-  const response = await fetch(`http://localhost:3000/active-operators`);
-  const data = await response.json();
-  return data;
+  try {
+    const response = await fetch(`http://localhost:3000/active-operators`);
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error(error);
+  }
 }
 
 /**
@@ -116,43 +136,49 @@ async function getPositions(operator) {
  * @param {string} color - hex color value
  */
 async function updatePositions(operator, color) {
-  const positions = await getPositions(operator);
-  const positionsFeatureCollection = {
-    type: "FeatureCollection",
-    features: positions,
-  };
+  try {
+    const positions = await getPositions(operator);
+    const positionsFeatureCollection = {
+      type: "FeatureCollection",
+      features: positions,
+    };
 
-  // Remove operator source and layers if all vehicle's are inactive
-  if (!positions.length && map.getSource(`${operator}-positions`)) {
-    map.removeLayer(`${operator}-positions-layer`);
-    map.removeSource(`${operator}-positions`);
-    console.log(`Removed ${operator} source`);
-  }
+    // Remove operator source and layers if all vehicle's are inactive
+    if (!positions.length && map.getSource(`${operator}-positions`)) {
+      map.removeLayer(`${operator}-positions-layer`);
+      map.removeSource(`${operator}-positions`);
+      console.log(`Removed ${operator} source`);
+    }
 
-  // Update positions if there are active vehicles
-  else if (map.getSource(`${operator}-positions`)) {
-    map.getSource(`${operator}-positions`).setData(positionsFeatureCollection);
-  }
+    // Update positions if there are active vehicles
+    else if (map.getSource(`${operator}-positions`)) {
+      map
+        .getSource(`${operator}-positions`)
+        .setData(positionsFeatureCollection);
+    }
 
-  // Create source and layer and plot positions
-  else if (positions.length) {
-    map.addSource(`${operator}-positions`, {
-      type: "geojson",
-      data: positionsFeatureCollection,
-      generateId: true,
-    });
+    // Create source and layer and plot positions
+    else if (positions.length) {
+      map.addSource(`${operator}-positions`, {
+        type: "geojson",
+        data: positionsFeatureCollection,
+        generateId: true,
+      });
 
-    map.addLayer({
-      id: `${operator}-positions-layer`,
-      type: "circle",
-      source: `${operator}-positions`,
-      paint: {
-        "circle-color": color,
-        "circle-radius": 6,
-        "circle-stroke-width": 1,
-        "circle-stroke-color": "#000000",
-      },
-    });
+      map.addLayer({
+        id: `${operator}-positions-layer`,
+        type: "circle",
+        source: `${operator}-positions`,
+        paint: {
+          "circle-color": color,
+          "circle-radius": 6,
+          "circle-stroke-width": 1,
+          "circle-stroke-color": "#000000",
+        },
+      });
+    }
+  } catch (error) {
+    console.error(error);
   }
 }
 
@@ -173,16 +199,19 @@ async function getAllShapeCoordinates(operator, shapeIds) {
       shapeIds: shapeIds,
     }),
   };
-  const response = await fetch("http://localhost:3000/shapes", options);
-  const data = await response.json();
-  return data;
+  try {
+    const response = await fetch("http://localhost:3000/shapes", options);
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error(error);
+  }
 }
-
 
 /**
  * Return all transit stations on active lines for operator
- * @param {string} operator 
- * @param {array} tripIds 
+ * @param {string} operator
+ * @param {array} tripIds
  * @returns array
  */
 async function getOperatorTripStops(operator, tripIds) {
@@ -196,9 +225,13 @@ async function getOperatorTripStops(operator, tripIds) {
       tripIds: tripIds,
     }),
   };
-  const response = await fetch("http://localhost:3000/trip-stops", options);
-  const data = await response.json();
-  return data;
+  try {
+    const response = await fetch("http://localhost:3000/trip-stops", options);
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error(error);
+  }
 }
 
 /**
@@ -339,8 +372,8 @@ async function updateShapesAndTripStops(operator, color) {
           "circle-color": "#ffffff",
           "circle-radius": {
             stops: [
-              [9, 0.75],
-              [16, 6],
+              [9.4, 0.6],
+              [16, 5],
             ],
           },
           "circle-stroke-width": 1,
@@ -482,30 +515,34 @@ async function createMenu() {
  * Update list of operators to show/remove operators which became active/inactive
  */
 async function updateMenu() {
-  const allOperators = await getOperators();
-  const activeOperators = await getActiveOperators();
-  const nonActiveOperators = allOperators.filter((operator) => {
-    return !activeOperators.some((active) => {
-      return operator.id === active.id;
+  try {
+    const allOperators = await getOperators();
+    const activeOperators = await getActiveOperators();
+    const nonActiveOperators = allOperators.filter((operator) => {
+      return !activeOperators.some((active) => {
+        return operator.id === active.id;
+      });
     });
-  });
 
-  for (const active of activeOperators) {
-    let operatorId = active.id;
-    if (operatorId === "3D") {
-      operatorId = "three-d";
+    for (const active of activeOperators) {
+      let operatorId = active.id;
+      if (operatorId === "3D") {
+        operatorId = "three-d";
+      }
+      const operatorEl = document.querySelector(`.${operatorId}`);
+      operatorEl.style.display = "block";
     }
-    const operatorEl = document.querySelector(`.${operatorId}`);
-    operatorEl.style.display = "block";
-  }
 
-  for (const nonActive of nonActiveOperators) {
-    let operatorId = nonActive.id;
-    if (operatorId === "3D") {
-      operatorId = "three-d";
+    for (const nonActive of nonActiveOperators) {
+      let operatorId = nonActive.id;
+      if (operatorId === "3D") {
+        operatorId = "three-d";
+      }
+      const operatorEl = document.querySelector(`.${operatorId}`);
+      operatorEl.style.display = "none";
     }
-    const operatorEl = document.querySelector(`.${operatorId}`);
-    operatorEl.style.display = "none";
+  } catch (error) {
+    console.error(error);
   }
 }
 
@@ -567,7 +604,7 @@ function leavePositionsHoverEvent() {
 
 /**
  * Show transit station name when hovered over
- * @param {event} e 
+ * @param {event} e
  */
 function enterTripStopsHoverEvent(e) {
   map.getCanvas().style.cursor = "pointer";
