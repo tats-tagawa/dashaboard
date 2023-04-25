@@ -641,6 +641,17 @@ function getOperatorScheduledStops(db, operator, tripIds) {
   });
 }
 
+function getOperatorTripStops(db, operator, tripIds) {
+  return new Promise((resolve, reject) => {
+    const tripIdsProcessed = tripIds.map((tripId) => `'${tripId}'`);
+    const query = `SELECT * FROM trip_stops WHERE operator='${operator}' AND trip_id IN (${tripIdsProcessed})`;
+    db.all(query, (error, data) => {
+      if (error) reject(error);
+      resolve(data);
+    });
+  });
+}
+
 /**
  * Update trip stops data for an operator
  * @param {object} db 
