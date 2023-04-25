@@ -12,8 +12,9 @@ import {
   updatePositions,
   getShapeCoordinates,
   getAllShapeCoordinates,
-  getOperatorTripStops,
+  getOperatorScheduledStops,
 } from "./utils/sqlite.js";
+import { getOperatorTripUpdates } from "./utils/transit-data.js";
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -104,9 +105,14 @@ app.post("/trip-stops", async (req, res) => {
   const operator = req.body.operator;
   const tripIds = req.body.tripIds;
   try {
-    const data = await getOperatorTripStops(db, operator, tripIds);
+    const data = await getOperatorScheduledStops(db, operator, tripIds);
     res.send(data);
   } catch (error) {
     console.error(error);
   }
+});
+
+app.get("/trip-updates", async (req, res) => {
+  const data = await getOperatorTripUpdates(req.query.operator);
+  res.send(data);
 });

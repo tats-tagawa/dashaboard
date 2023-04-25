@@ -352,6 +352,8 @@ async function updateOperatorTrips(db, data, operator) {
       row = row.map((el) => el.replaceAll('"', ""));
       // add operator id at index 0
       const tripData = [operator].concat(row);
+      const tripId = tripData[3];
+      const tripStops = getOperatorScheduledStops(db, operator, [tripId])
       const query = `
         INSERT INTO trips
           (operator, route_id, service_id, trip_id, trip_headsign, direction_id, block_id, shape_id, trip_short_name, bikes_allowed, wheelchair_accessible)
@@ -376,6 +378,8 @@ async function updateOperatorTrips(db, data, operator) {
   }
   return `Updated ${operator} Trips`;
 }
+
+console.log(await getOperatorScheduledStops(connectDB(), "SA", ["t_5371018_b_78099_tn_0"]))
 
 /**
  * Create table for shape coordinates 
@@ -624,9 +628,9 @@ async function createTripStopsTable(db) {
  * @param {object} db 
  * @param {string} operator 
  * @param {array} tripIds 
- * @returns {array}
+ * @returns {Promise<array>}
  */
-async function getOperatorTripStops(db, operator, tripIds) {
+function getOperatorScheduledStops(db, operator, tripIds) {
   return new Promise((resolve, reject) => {
     const tripIdsProcessed = tripIds.map((tripId) => `'${tripId}'`);
     const query = `SELECT * FROM stops WHERE stop_id IN (SELECT DISTINCT stop_id FROM trip_stops WHERE operator='${operator}' AND trip_id IN (${tripIdsProcessed}))`;
@@ -712,7 +716,7 @@ export {
   updatePositions,
   getShapeCoordinates,
   getAllShapeCoordinates,
-  getOperatorTripStops,
+  getOperatorScheduledStops
 };
 
 /**

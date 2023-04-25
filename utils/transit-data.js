@@ -131,7 +131,7 @@ async function getVehiclePositions(operator = "RG") {
  * @param {string} operator=RG - operator's code name
  * @returns {object} JSON object
  */
-async function getTripUpdates(operator = "RG") {
+async function getOperatorTripUpdates(operator) {
   try {
     const response = await axios.get(
       `http://api.511.org/Transit/TripUpdates?api_key=${process.env.API_KEY}&agency=${operator}`,
@@ -204,6 +204,6 @@ export {
   getOperatorColors,
   getOperatorCommonNames,
   getVehiclePositions,
-  getTripUpdates,
+  getOperatorTripUpdates,
   getOperatorGTFSDataFeed,
 };
