@@ -346,13 +346,28 @@ async function createTripsTable(db) {
 async function updateOperatorTrips(db, data, operator) {
   db.run(`DELETE FROM trips WHERE operator='${operator}'`);
   let rows = data.split("\r\n");
-  //-- let promises = rows.map((row) => {
   let promises = rows.map(async (row) => {
-    //-- return new Promise((resolve, reject) => {
+    // add "|" between double commas so it can be splitted correctly
+    const regex = /,,/g;
+    while (regex.test(row)) {
+      row = row.replace(regex, ",|,");
+    }
+
+    // add "|" at end of string if string ends with a comma
+    const regex2 = /,$/g;
+    row = row.replace(regex2, ",|");
+
     // split by commas except when commas are within double quotes
     // regex from https://stackoverflow.com/q/11456850/4855664
-    const re = /(".*?"|[^",\s]+)(?=\s*,|\s*$)|(,,)/g;
+    const re = /(".*?"|[^",]+)(?=\s*,|\s*$)/g;
     row = row.match(re);
+
+    // replace all "|" added earlier with empty string
+    // replace all quotations marks with empty string
+    row = row.map((el) => {
+      el = el.replaceAll("|", "");
+      return el.replaceAll('"', "");
+    });
     row = row.map((el) => el.replaceAll('"', ""));
     // add operator id at index 0
     const tripData = [operator].concat(row);
@@ -373,7 +388,6 @@ async function updateOperatorTrips(db, data, operator) {
           (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
     return new Promise((resolve, reject) => {
-      console.log("INSIDE");
       db.run(query, tripData, (error) => {
         if (error) {
           console.log(`Trips Error - ${tripData}`);
@@ -383,10 +397,8 @@ async function updateOperatorTrips(db, data, operator) {
           resolve("Done");
         }
       });
-      //-- });
     });
   });
-  console.log(promises);
   try {
     await Promise.all(promises);
     return `Updated ${operator} Trips`;
