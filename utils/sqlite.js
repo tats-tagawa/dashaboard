@@ -26,7 +26,7 @@ function connectDB() {
 
 /**
  * Create all tables necessary
- * @param {object} db 
+ * @param {object} db
  */
 function createAllTables(db) {
   createOperatorsTable(db);
@@ -39,7 +39,7 @@ function createAllTables(db) {
 
 /**
  * Delete existing data from table to update with live data
- * @param {object} db 
+ * @param {object} db
  * @param {string} table name
  */
 function deleteTableData(db, table) {
@@ -47,8 +47,8 @@ function deleteTableData(db, table) {
 }
 
 /**
- * Create table for list of operators 
- * @param {object} db 
+ * Create table for list of operators
+ * @param {object} db
  */
 function createOperatorsTable(db) {
   db.run(`
@@ -64,8 +64,8 @@ function createOperatorsTable(db) {
 
 /**
  * Get list of operators and their general information
- * @param {object} db 
- * @returns {array} 
+ * @param {object} db
+ * @returns {array}
  */
 function getOperators(db) {
   return new Promise((resolve, reject) => {
@@ -83,9 +83,9 @@ function getOperators(db) {
 
 /**
  * Get general information for a single operator
- * @param {object} db 
- * @param {string} operator 
- * @returns {array} 
+ * @param {object} db
+ * @param {string} operator
+ * @returns {array}
  */
 function getOperator(db, operator) {
   return new Promise((resolve, reject) => {
@@ -103,7 +103,7 @@ function getOperator(db, operator) {
 
 /**
  * Get list of operators with vehicles in service
- * @param {object} db 
+ * @param {object} db
  * @returns {array}
  */
 function getActiveOperators(db) {
@@ -121,7 +121,7 @@ function getActiveOperators(db) {
 
 /**
  * Update operator table with data from 511.org
- * @param {object} db 
+ * @param {object} db
  */
 async function updateOperators(db) {
   deleteTableData(db, "operators");
@@ -157,34 +157,34 @@ async function updateOperators(db) {
 /**
  * Update all data tables for a single operator
  * These are data that does not require frequent updates (transit stops, route shapes) unlike positions data
- * @param {object} db 
- * @param {string} operator 
+ * @param {object} db
+ * @param {string} operator
  */
 async function updateOperatorDataTable(db, operator) {
   console.log(`Updating ${operator} Data Table`);
   try {
     const operatorData = await getOperatorGTFSDataFeed(operator);
     for await (const data of operatorData) {
-      if (data[0] === "shapes") {
-        console.log(`Updating ${operator} Shapes`);
-        const status = await updateOperatorShapes(db, data[2], operator);
-        console.log(status);
-      }
+      // if (data[0] === "shapes") {
+      //   console.log(`Updating ${operator} Shapes`);
+      //   const status = await updateOperatorShapes(db, data[2], operator);
+      //   console.log(status);
+      // }
       if (data[0] === "trips") {
         console.log(`Updating ${operator} Trips`);
         const status = await updateOperatorTrips(db, data[2], operator);
         console.log(status);
       }
-      if (data[0] === "stops") {
-        console.log(`Updating ${operator} Stops`);
-        const status = await updateOperatorStops(db, data[2], operator);
-        console.log(status);
-      }
-      if (data[0] === "stop_times") {
-        console.log(`Updating ${operator} Trip Stops`);
-        const status = await updateOperatorTripStops(db, data[2], operator);
-        console.log(status);
-      }
+      // if (data[0] === "stops") {
+      //   console.log(`Updating ${operator} Stops`);
+      //   const status = await updateOperatorStops(db, data[2], operator);
+      //   console.log(status);
+      // }
+      // if (data[0] === "stop_times") {
+      //   console.log(`Updating ${operator} Trip Stops`);
+      //   const status = await updateOperatorTripStops(db, data[2], operator);
+      //   console.log(status);
+      // }
     }
     console.log(`Updated ${operator} Data Table`);
   } catch (error) {
@@ -192,10 +192,11 @@ async function updateOperatorDataTable(db, operator) {
   }
 }
 
+updateOperatorDataTable(connectDB(), "SA");
 /**
  * Update all data tables for all operators
  * Warning: May require > 10 mins to complete running
- * @param {object} db 
+ * @param {object} db
  */
 async function updateAllOperators(db) {
   try {
@@ -213,7 +214,7 @@ async function updateAllOperators(db) {
 
 /**
  * Create table for positions of transit vehicles in service
- * @param {object} db 
+ * @param {object} db
  */
 async function createPositionsTable(db) {
   db.run(`
@@ -235,9 +236,9 @@ async function createPositionsTable(db) {
 
 /**
  * Get positions of all transit vehicles in service for a operator
- * @param {object} db 
- * @param {string} operator 
- * @returns {array} 
+ * @param {object} db
+ * @param {string} operator
+ * @returns {array}
  */
 function getPositions(db, operator) {
   return new Promise((resolve, reject) => {
@@ -259,7 +260,7 @@ function getPositions(db, operator) {
 
 /**
  * Update position table with most recent position information
- * @param {object} db 
+ * @param {object} db
  */
 async function updatePositions(db) {
   console.log("Updating Positions");
@@ -312,7 +313,7 @@ async function updatePositions(db) {
 
 /**
  * Create table for trip information for each transit service
- * @param {object} db 
+ * @param {object} db
  */
 async function createTripsTable(db) {
   db.run(`
@@ -328,38 +329,51 @@ async function createTripsTable(db) {
         shape_id TEXT,
         trip_short_name TEXT,
         bikes_allowed INT,
-        wheelchair_accessible INT
+        wheelchair_accessible INT,
+        origin_name,
+        destination_name
       )
   `);
 }
 
 /**
  * Update trips table with all scheduled trips for an operator
- * @param {object} db 
- * @param {array} data 
- * @param {string} operator 
- * @returns 
+ * @param {object} db
+ * @param {array} data
+ * @param {string} operator
+ * @returns
  */
 async function updateOperatorTrips(db, data, operator) {
   db.run(`DELETE FROM trips WHERE operator='${operator}'`);
   let rows = data.split("\r\n");
-  let promises = rows.map((row) => {
-    return new Promise((resolve, reject) => {
-      // split by commas except when commas are within double quotes
-      // regex from https://stackoverflow.com/q/11456850/4855664
-      const re = /(".*?"|[^",\s]+)(?=\s*,|\s*$)|(,,)/g;
-      row = row.match(re);
-      row = row.map((el) => el.replaceAll('"', ""));
-      // add operator id at index 0
-      const tripData = [operator].concat(row);
-      const tripId = tripData[3];
-      const tripStops = getOperatorScheduledStops(db, operator, [tripId])
-      const query = `
+  //-- let promises = rows.map((row) => {
+  let promises = rows.map(async (row) => {
+    //-- return new Promise((resolve, reject) => {
+    // split by commas except when commas are within double quotes
+    // regex from https://stackoverflow.com/q/11456850/4855664
+    const re = /(".*?"|[^",\s]+)(?=\s*,|\s*$)|(,,)/g;
+    row = row.match(re);
+    row = row.map((el) => el.replaceAll('"', ""));
+    // add operator id at index 0
+    const tripData = [operator].concat(row);
+    const tripId = tripData[3];
+    const [origin, destination] = await getTripOriginDestination(
+      db,
+      operator,
+      tripId
+    );
+    const originName = origin.stop_name;
+    const destinationName = destination.stop_name;
+    tripData.push(originName);
+    tripData.push(destinationName);
+    const query = `
         INSERT INTO trips
-          (operator, route_id, service_id, trip_id, trip_headsign, direction_id, block_id, shape_id, trip_short_name, bikes_allowed, wheelchair_accessible)
+          (operator, route_id, service_id, trip_id, trip_headsign, direction_id, block_id, shape_id, trip_short_name, bikes_allowed, wheelchair_accessible, origin_name, destination_name)
         VALUES
-          (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
+    return new Promise((resolve, reject) => {
+      console.log("INSIDE");
       db.run(query, tripData, (error) => {
         if (error) {
           console.log(`Trips Error - ${tripData}`);
@@ -369,21 +383,21 @@ async function updateOperatorTrips(db, data, operator) {
           resolve("Done");
         }
       });
+      //-- });
     });
   });
+  console.log(promises);
   try {
     await Promise.all(promises);
+    return `Updated ${operator} Trips`;
   } catch (error) {
     console.error(error);
   }
-  return `Updated ${operator} Trips`;
 }
 
-console.log(await getOperatorScheduledStops(connectDB(), "SA", ["t_5371018_b_78099_tn_0"]))
-
 /**
- * Create table for shape coordinates 
- * @param {object} db 
+ * Create table for shape coordinates
+ * @param {object} db
  */
 async function createShapesTable(db) {
   db.run(`
@@ -400,9 +414,9 @@ async function createShapesTable(db) {
 
 /**
  * Update table with with the coordinates of each shape for an operator
- * @param {object} db 
+ * @param {object} db
  * @param {array} data
- * @param {*} operator 
+ * @param {*} operator
  * @returns {string}
  */
 async function updateOperatorShapes(db, data, operator) {
@@ -438,8 +452,8 @@ async function updateOperatorShapes(db, data, operator) {
 
 /**
  * Get shape ID of the provided trip ID
- * @param {object} db 
- * @param {string} operator 
+ * @param {object} db
+ * @param {string} operator
  * @param {string} trip ID
  * @returns {array} shape IDs
  */
@@ -463,9 +477,9 @@ async function getTripShapeId(db, operator, tripId) {
 
 /**
  * Get coordinates of the provided shape ID
- * @param {object} db 
- * @param {string} operator 
- * @param {string} shape ID 
+ * @param {object} db
+ * @param {string} operator
+ * @param {string} shape ID
  * @returns {array} coordinates for the shape ID
  */
 async function getShapeCoordinates(db, operator, shapeId) {
@@ -485,9 +499,9 @@ async function getShapeCoordinates(db, operator, shapeId) {
 
 /**
  * Get coordinates for all the provided shape IDs
- * @param {object} db 
- * @param {string} operator 
- * @param {array} shape IDs 
+ * @param {object} db
+ * @param {string} operator
+ * @param {array} shape IDs
  * @returns {object} key - shapeId, value - array of coordinates
  */
 async function getAllShapeCoordinates(db, operator, shapeIds) {
@@ -515,7 +529,7 @@ async function getAllShapeCoordinates(db, operator, shapeIds) {
 
 /**
  * Create table for stops (station) information for all operators
- * @param {object} db 
+ * @param {object} db
  */
 async function createStopsTable(db) {
   db.run(`
@@ -539,10 +553,27 @@ async function createStopsTable(db) {
 }
 
 /**
+ *
+ * @param {object} db
+ * @param {string} operator
+ * @param {string} stopId
+ * @returns {Promise<object>}
+ */
+function getOperatorStop(db, operator, stopId) {
+  return new Promise((resolve, reject) => {
+    const query = `SELECT * FROM stops WHERE operator = '${operator}' AND stop_id = '${stopId}'`;
+    db.get(query, (error, data) => {
+      if (error) reject(error);
+      resolve(data);
+    });
+  });
+}
+
+/**
  * Update table with all stops for the operator
- * @param {object} db 
- * @param {array} data 
- * @param {string} operator 
+ * @param {object} db
+ * @param {array} data
+ * @param {string} operator
  * @returns {string}
  */
 async function updateOperatorStops(db, data, operator) {
@@ -603,7 +634,7 @@ async function updateOperatorStops(db, data, operator) {
 
 /**
  * Create table for trip stops information
- * @param {object} db 
+ * @param {object} db
  */
 async function createTripStopsTable(db) {
   db.run(`
@@ -625,9 +656,9 @@ async function createTripStopsTable(db) {
 
 /**
  * Get all trip stops that will be made for each trip ID
- * @param {object} db 
- * @param {string} operator 
- * @param {array} tripIds 
+ * @param {object} db
+ * @param {string} operator
+ * @param {array} tripIds
  * @returns {Promise<array>}
  */
 function getOperatorScheduledStops(db, operator, tripIds) {
@@ -641,6 +672,14 @@ function getOperatorScheduledStops(db, operator, tripIds) {
   });
 }
 
+/**
+ *
+ * @param {object} db
+ * @param {array} options
+ * @param {string} operator
+ * @param {array} tripIds
+ * @returns  {Promise<array>}
+ */
 function getOperatorTripStops(db, operator, tripIds) {
   return new Promise((resolve, reject) => {
     const tripIdsProcessed = tripIds.map((tripId) => `'${tripId}'`);
@@ -652,11 +691,28 @@ function getOperatorTripStops(db, operator, tripIds) {
   });
 }
 
+async function getTripOriginDestination(db, operator, tripId) {
+  try {
+    const stops = await getOperatorTripStops(db, operator, [tripId]);
+    const origin = stops[0];
+    const destination = stops.slice(-1)[0];
+    const originData = await getOperatorStop(db, operator, origin.stop_id);
+    const destinationData = await getOperatorStop(
+      db,
+      operator,
+      destination.stop_id
+    );
+    return [originData, destinationData];
+  } catch (error) {
+    console.error(error);
+  }
+}
+
 /**
  * Update trip stops data for an operator
- * @param {object} db 
- * @param {array} data 
- * @param {string} operator 
+ * @param {object} db
+ * @param {array} data
+ * @param {string} operator
  * @returns {string}
  */
 async function updateOperatorTripStops(db, data, operator) {
@@ -727,13 +783,13 @@ export {
   updatePositions,
   getShapeCoordinates,
   getAllShapeCoordinates,
-  getOperatorScheduledStops
+  getOperatorScheduledStops,
 };
 
 /**
  * Show progress of how much data has been processed.
- * @param {int} count 
- * @param {int} length 
+ * @param {int} count
+ * @param {int} length
  */
 function progress(count, length) {
   let counter = count / length;
