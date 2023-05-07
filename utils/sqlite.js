@@ -26,7 +26,7 @@ function connectDB() {
 
 /**
  * Create all tables necessary
- * @param {object} db 
+ * @param {object} db
  */
 function createAllTables(db) {
   createOperatorsTable(db);
@@ -39,7 +39,7 @@ function createAllTables(db) {
 
 /**
  * Delete existing data from table to update with live data
- * @param {object} db 
+ * @param {object} db
  * @param {string} table name
  */
 function deleteTableData(db, table) {
@@ -47,8 +47,8 @@ function deleteTableData(db, table) {
 }
 
 /**
- * Create table for list of operators 
- * @param {object} db 
+ * Create table for list of operators
+ * @param {object} db
  */
 function createOperatorsTable(db) {
   db.run(`
@@ -64,8 +64,8 @@ function createOperatorsTable(db) {
 
 /**
  * Get list of operators and their general information
- * @param {object} db 
- * @returns {array} 
+ * @param {object} db
+ * @returns {array}
  */
 function getOperators(db) {
   return new Promise((resolve, reject) => {
@@ -83,9 +83,9 @@ function getOperators(db) {
 
 /**
  * Get general information for a single operator
- * @param {object} db 
- * @param {string} operator 
- * @returns {array} 
+ * @param {object} db
+ * @param {string} operator
+ * @returns {array}
  */
 function getOperator(db, operator) {
   return new Promise((resolve, reject) => {
@@ -103,7 +103,7 @@ function getOperator(db, operator) {
 
 /**
  * Get list of operators with vehicles in service
- * @param {object} db 
+ * @param {object} db
  * @returns {array}
  */
 function getActiveOperators(db) {
@@ -121,7 +121,7 @@ function getActiveOperators(db) {
 
 /**
  * Update operator table with data from 511.org
- * @param {object} db 
+ * @param {object} db
  */
 async function updateOperators(db) {
   deleteTableData(db, "operators");
@@ -157,8 +157,8 @@ async function updateOperators(db) {
 /**
  * Update all data tables for a single operator
  * These are data that does not require frequent updates (transit stops, route shapes) unlike positions data
- * @param {object} db 
- * @param {string} operator 
+ * @param {object} db
+ * @param {string} operator
  */
 async function updateOperatorDataTable(db, operator) {
   console.log(`Updating ${operator} Data Table`);
@@ -195,7 +195,7 @@ async function updateOperatorDataTable(db, operator) {
 /**
  * Update all data tables for all operators
  * Warning: May require > 10 mins to complete running
- * @param {object} db 
+ * @param {object} db
  */
 async function updateAllOperators(db) {
   try {
@@ -213,7 +213,7 @@ async function updateAllOperators(db) {
 
 /**
  * Create table for positions of transit vehicles in service
- * @param {object} db 
+ * @param {object} db
  */
 async function createPositionsTable(db) {
   db.run(`
@@ -235,9 +235,9 @@ async function createPositionsTable(db) {
 
 /**
  * Get positions of all transit vehicles in service for a operator
- * @param {object} db 
- * @param {string} operator 
- * @returns {array} 
+ * @param {object} db
+ * @param {string} operator
+ * @returns {array}
  */
 function getPositions(db, operator) {
   return new Promise((resolve, reject) => {
@@ -259,7 +259,7 @@ function getPositions(db, operator) {
 
 /**
  * Update position table with most recent position information
- * @param {object} db 
+ * @param {object} db
  */
 async function updatePositions(db) {
   console.log("Updating Positions");
@@ -312,7 +312,7 @@ async function updatePositions(db) {
 
 /**
  * Create table for trip information for each transit service
- * @param {object} db 
+ * @param {object} db
  */
 async function createTripsTable(db) {
   db.run(`
@@ -335,10 +335,10 @@ async function createTripsTable(db) {
 
 /**
  * Update trips table with all scheduled trips for an operator
- * @param {object} db 
- * @param {array} data 
- * @param {string} operator 
- * @returns 
+ * @param {object} db
+ * @param {array} data
+ * @param {string} operator
+ * @returns
  */
 async function updateOperatorTrips(db, data, operator) {
   db.run(`DELETE FROM trips WHERE operator='${operator}'`);
@@ -378,8 +378,8 @@ async function updateOperatorTrips(db, data, operator) {
 }
 
 /**
- * Create table for shape coordinates 
- * @param {object} db 
+ * Create table for shape coordinates
+ * @param {object} db
  */
 async function createShapesTable(db) {
   db.run(`
@@ -396,9 +396,9 @@ async function createShapesTable(db) {
 
 /**
  * Update table with with the coordinates of each shape for an operator
- * @param {object} db 
+ * @param {object} db
  * @param {array} data
- * @param {*} operator 
+ * @param {*} operator
  * @returns {string}
  */
 async function updateOperatorShapes(db, data, operator) {
@@ -434,8 +434,8 @@ async function updateOperatorShapes(db, data, operator) {
 
 /**
  * Get shape ID of the provided trip ID
- * @param {object} db 
- * @param {string} operator 
+ * @param {object} db
+ * @param {string} operator
  * @param {string} trip ID
  * @returns {array} shape IDs
  */
@@ -459,9 +459,9 @@ async function getTripShapeId(db, operator, tripId) {
 
 /**
  * Get coordinates of the provided shape ID
- * @param {object} db 
- * @param {string} operator 
- * @param {string} shape ID 
+ * @param {object} db
+ * @param {string} operator
+ * @param {string} shape ID
  * @returns {array} coordinates for the shape ID
  */
 async function getShapeCoordinates(db, operator, shapeId) {
@@ -481,9 +481,9 @@ async function getShapeCoordinates(db, operator, shapeId) {
 
 /**
  * Get coordinates for all the provided shape IDs
- * @param {object} db 
- * @param {string} operator 
- * @param {array} shape IDs 
+ * @param {object} db
+ * @param {string} operator
+ * @param {array} shape IDs
  * @returns {object} key - shapeId, value - array of coordinates
  */
 async function getAllShapeCoordinates(db, operator, shapeIds) {
@@ -511,7 +511,7 @@ async function getAllShapeCoordinates(db, operator, shapeIds) {
 
 /**
  * Create table for stops (station) information for all operators
- * @param {object} db 
+ * @param {object} db
  */
 async function createStopsTable(db) {
   db.run(`
@@ -536,9 +536,9 @@ async function createStopsTable(db) {
 
 /**
  * Update table with all stops for the operator
- * @param {object} db 
- * @param {array} data 
- * @param {string} operator 
+ * @param {object} db
+ * @param {array} data
+ * @param {string} operator
  * @returns {string}
  */
 async function updateOperatorStops(db, data, operator) {
@@ -599,7 +599,7 @@ async function updateOperatorStops(db, data, operator) {
 
 /**
  * Create table for trip stops information
- * @param {object} db 
+ * @param {object} db
  */
 async function createTripStopsTable(db) {
   db.run(`
@@ -621,9 +621,9 @@ async function createTripStopsTable(db) {
 
 /**
  * Get all trip stops that will be made for each trip ID
- * @param {object} db 
- * @param {string} operator 
- * @param {array} tripIds 
+ * @param {object} db
+ * @param {string} operator
+ * @param {array} tripIds
  * @returns {array}
  */
 async function getOperatorTripStops(db, operator, tripIds) {
@@ -639,9 +639,9 @@ async function getOperatorTripStops(db, operator, tripIds) {
 
 /**
  * Update trip stops data for an operator
- * @param {object} db 
- * @param {array} data 
- * @param {string} operator 
+ * @param {object} db
+ * @param {array} data
+ * @param {string} operator
  * @returns {string}
  */
 async function updateOperatorTripStops(db, data, operator) {
@@ -717,8 +717,8 @@ export {
 
 /**
  * Show progress of how much data has been processed.
- * @param {int} count 
- * @param {int} length 
+ * @param {int} count
+ * @param {int} length
  */
 function progress(count, length) {
   let counter = count / length;
