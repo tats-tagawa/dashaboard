@@ -1,5 +1,5 @@
 (async() => {
-  const config = await fetch("http://localhost:3000/config").then(res => {
+  const config = await fetch("/config").then(res => {
     return res.json()
   });
   mapboxgl.accessToken = config.mapboxToken;
@@ -50,7 +50,7 @@
   async function getOperator(operator) {
     try {
       const response = await fetch(
-        `http://localhost:3000/operator?operator=${operator}`
+        `/operator?operator=${operator}`
       );
       const data = await response.json();
       return data[0];
@@ -66,7 +66,7 @@
  */
   async function getOperators() {
     try {
-      const response = await fetch(`http://localhost:3000/operators`);
+      const response = await fetch(`/operators`);
       const data = await response.json();
       return data;
     } catch (error) {
@@ -80,7 +80,7 @@
  */
   async function getActiveOperators() {
     try {
-      const response = await fetch(`http://localhost:3000/active-operators`);
+      const response = await fetch(`/active-operators`);
       const data = await response.json();
       return data;
     } catch (error) {
@@ -96,7 +96,7 @@
   async function getPositions(operator) {
     try {
       const response = await fetch(
-        `http://localhost:3000/positions?operator=${operator}`
+        `/positions?operator=${operator}`
       );
       const positions = await response.json();
       const operatorGeneralInfo = await getOperator(operator);
@@ -203,7 +203,7 @@
       }),
     };
     try {
-      const response = await fetch("http://localhost:3000/shapes", options);
+      const response = await fetch("/shapes", options);
       const data = await response.json();
       return data;
     } catch (error) {
@@ -229,7 +229,7 @@
       }),
     };
     try {
-      const response = await fetch("http://localhost:3000/trip-stops", options);
+      const response = await fetch("/trip-stops", options);
       const data = await response.json();
       return data;
     } catch (error) {
