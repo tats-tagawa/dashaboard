@@ -465,8 +465,9 @@
               leaveTripStopHoverEvent
             );
             intervals[op] = setInterval(async () => {
-              await updateShapesAndTripStops(operatorId, color, positions);
-              await updatePositions(operatorId, color, positions);
+              const positions = await getPositions(op);
+              await updateShapesAndTripStops(op, color, positions);
+              await updatePositions(op, color, positions);
               console.log("Updated Positions");
             }, 60000);
           }
