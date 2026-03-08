@@ -713,6 +713,7 @@ export {
   getShapeCoordinates,
   getAllShapeCoordinates,
   getOperatorTripStops,
+  updateAllOperators
 };
 
 /**
