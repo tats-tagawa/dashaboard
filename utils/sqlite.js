@@ -181,7 +181,7 @@ async function updateOperatorDataTable(db, operator) {
         console.log(status);
       }
       if (data[0] === "stop_times") {
-        console.log(`Updating ${operator} Trip Stops`);
+        console.log(`Updating ${operator} Trip Stops (Update may take up to 10 mins)`);
         const status = await updateOperatorTripStops(db, data[2], operator);
         console.log(status);
       }
@@ -695,8 +695,9 @@ async function updateOperatorTripStops(db, data, operator) {
     for (let i = 0; i < promiseLength; i += 1000) {
       const request = promises.slice(i, i + 1000);
       await Promise.all(request);
-      progress(i, promiseLength);
+      progress(Math.min(i + 1000, promiseLength), promiseLength);
     }
+    process.stdout.write('\n')
   } catch (error) {
     console.error(error);
   }
@@ -713,6 +714,7 @@ export {
   getShapeCoordinates,
   getAllShapeCoordinates,
   getOperatorTripStops,
+  updateOperatorDataTable,
   updateAllOperators
 };
 
@@ -722,7 +724,7 @@ export {
  * @param {int} length
  */
 function progress(count, length) {
-  let counter = count / length;
-  process.stdout.write(`${count} / ${length}: ${counter}\r`);
+  let counter = (count / length * 100).toFixed(1);
+  process.stdout.write(`\r${counter}%`);
   process.stdout.write(``);
 }

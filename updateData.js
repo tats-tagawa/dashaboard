@@ -1,5 +1,6 @@
-import { connectDB, updateAllOperators } from "./utils/sqlite.js";
+import { connectDB, updateOperatorDataTable, updateAllOperators } from "./utils/sqlite.js";
 
 const db = connectDB();
-await updateAllOperators(db);
+await updateOperatorDataTable(db, "CT");
+// await updateAllOperators(db);
 process.exit(0);
