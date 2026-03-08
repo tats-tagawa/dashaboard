@@ -3,6 +3,8 @@ import cors from "cors";
 import * as dotenv from "dotenv";
 dotenv.config();
 import * as cron from "node-cron";
+import path from "path";
+import { fileURLToPath } from "url";
 import {
   connectDB,
   getOperators,
@@ -18,13 +20,16 @@ import {
 const app = express();
 const port = process.env.PORT || 3000;
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+app.use(express.static(path.join(__dirname, "public")));
 app.use(cors());
 app.use(express.json());
 
 app.listen(port, () => {
   console.log(`Dashaboard listening on port ${port}`);
 });
-
 const db = connectDB();
 
 try {
