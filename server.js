@@ -13,7 +13,7 @@ import {
   getShapeCoordinates,
   getAllShapeCoordinates,
   getOperatorTripStops,
-} from "./utils/sqlite.js";
+} from "./utils/postgres.js";
 
 const app = express();
 const port = process.env.PORT || 3000;
