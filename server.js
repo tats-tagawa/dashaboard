@@ -40,6 +40,12 @@ cron.schedule("*/1 * * * *", async () => {
   }
 });
 
+app.get("/config", async (req, res) => {
+  res.json({
+    mapboxToken: process.env.MAPBOX_TOKEN,
+  })
+})
+
 app.get("/positions", async (req, res) => {
   try {
     const positions = await getPositions(db, req.query.operator);
