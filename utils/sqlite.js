@@ -715,7 +715,8 @@ export {
   getAllShapeCoordinates,
   getOperatorTripStops,
   updateOperatorDataTable,
-  updateAllOperators
+  updateAllOperators,
+  updateOperators
 };
 
 /**
