@@ -135,9 +135,8 @@ async function getPositions(operator) {
  * @param {string} operator - operator code name
  * @param {string} color - hex color value
  */
-async function updatePositions(operator, color) {
+async function updatePositions(operator, color, positions) {
   try {
-    const positions = await getPositions(operator);
     const positionsFeatureCollection = {
       type: "FeatureCollection",
       features: positions,
@@ -239,16 +238,14 @@ async function getOperatorTripStops(operator, tripIds) {
  * @param {string} operator - operator code name
  * @param {string} color - hex color code
  */
-async function updateShapesAndTripStops(operator, color) {
+async function updateShapesAndTripStops(operator, color, positions) {
   try {
-    const positions = await getPositions(operator);
-    const shapeIds = [];
-    const tripIds = [];
-
-    for (const position of positions) {
-      shapeIds.push(position.properties.shapeId);
-      tripIds.push(position.properties.tripId);
-    }
+    const shapeIds = [...new Set(positions.map(p => 
+      p.properties.shapeId).filter(Boolean)
+    )];
+    const tripIds  = [...new Set(positions.map(p =>
+      p.properties.tripId).filter(Boolean)
+    )];
     const shapesFeatureCollection = {
       type: "FeatureCollection",
       features: [],
@@ -276,10 +273,20 @@ async function updateShapesAndTripStops(operator, color) {
       };
 
       // Only create feature if shape / coordinates exists
-      if (coordinates) {
-        shapesFeatureCollection.features.push(
-          turf.lineString(coordinates, properties, options)
+      // Don't push invalid coordinates
+      if (coordinates && coordinates.length >= 2) {
+        const validCoordinates = coordinates.filter(
+          ([lng, lat]) => lng != null && lat != null && (lng !== 0 || lat !== 0)
         );
+        if (validCoordinates.length >= 2) {
+          try {
+            shapesFeatureCollection.features.push(
+              turf.lineString(validCoordinates, properties, options)
+            );
+          } catch (e) {
+            console.warn(`Skipping invalid shape ${shapeId}:`, e.message);
+          }
+        }
       }
     }
     // Remove operator source and layers if all vehicle's are inactive
@@ -317,7 +324,7 @@ async function updateShapesAndTripStops(operator, color) {
             "case",
             ["boolean", ["feature-state", "hover"], false],
             3,
-            0.5,
+            1.5,
           ],
         },
       });
@@ -372,8 +379,8 @@ async function updateShapesAndTripStops(operator, color) {
           "circle-color": "#ffffff",
           "circle-radius": {
             stops: [
-              [9.4, 0.6],
-              [16, 5],
+              [9.4, 2],
+              [16, 10],
             ],
           },
           "circle-stroke-width": 1,
@@ -429,8 +436,9 @@ async function createMenu() {
         if (checked) {
           selectedOperators.push(op);
           checkbox.disabled = true;
-          await updateShapesAndTripStops(op, color);
-          await updatePositions(op, color);
+          const positions = await getPositions(op)
+          await updateShapesAndTripStops(op, color, positions);
+          await updatePositions(op, color, positions);
           checkbox.disabled = false;
           map.on(
             "mouseenter",
@@ -453,8 +461,8 @@ async function createMenu() {
             leaveTripStopHoverEvent
           );
           intervals[op] = setInterval(async () => {
-            await updateShapesAndTripStops(operatorId, color);
-            await updatePositions(operatorId, color);
+            await updateShapesAndTripStops(operatorId, color, positions);
+            await updatePositions(operatorId, color, positions);
             console.log("Updated Positions");
           }, 60000);
         }
