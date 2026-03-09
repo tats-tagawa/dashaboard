@@ -323,7 +323,11 @@ function parseCSVRow(row) {
   const re = /(".*?"|[^",\s]+)(?=\s*,|\s*$)|(,,)/g;
   const matched = row.match(re);
   if (!matched) return null;
-  return matched.map((el) => el.replaceAll('"', "") ?? null);
+  return matched.map((el) => {
+    const cleaned = el.replaceAll('"', "") ?? null;
+    if (cleaned === ",," || (typeof cleaned === "string" && cleaned.trim() === "")) return "";
+    return cleaned;
+  });
 }
 
 /**
@@ -357,7 +361,10 @@ async function bulkInsert(db, sql, rowsData, label = "") {
     for (let i = 0; i < rowsData.length; i += batchSize) {
       const batch = rowsData.slice(i, i + batchSize);
       for (const values of batch) {
-        const sanitized = values.map((val) => val === "" ? null : val);
+        const sanitized = values.map((val) => {
+          if (val === "" || val === ",," || (typeof val === "string" && val.trim() === "")) return null;
+          return val;
+        });
         await client.query(sql, sanitized);
       }
       if (label) progress(Math.min(i + batchSize, rowsData.length), rowsData.length);

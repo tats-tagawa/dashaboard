@@ -6,3 +6,4 @@ GTFSDataFeeds
 *.db-*
 .eslintrc.json
 *.sql
+updateData.js
