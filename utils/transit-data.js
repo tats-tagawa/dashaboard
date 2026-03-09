@@ -71,7 +71,7 @@ function getOperatorCommonNames() {
     "3D": "Tri Delta Transit",
     AC: "AC Transit",
     AF: "Angel Island Triburon Ferry",
-    AM: "Capital Corridor",
+    AM: "Capitol Corridor",
     BA: "BART",
     CC: "County Connection",
     CE: "ACE",
