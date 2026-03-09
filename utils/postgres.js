@@ -248,6 +248,7 @@ async function updatePositions(db) {
     const client = await db.connect();
     try {
       await client.query("BEGIN");
+      await client.query("DELETE FROM positions");
       for (const position of positions) {
         if (position.vehicle.trip) {
           const [operator, tripId] = position.vehicle.trip.tripId.split(":");
@@ -258,7 +259,8 @@ async function updatePositions(db) {
             await client.query(
               `INSERT INTO positions
                 (id, operator, trip_id, shape_id, vehicle_id, route_id, direction_id, latitude, longitude, bearing, speed)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+                ON CONFLICT (id) DO NOTHING``,
               [
                 `${position.vehicle.trip.tripId}:${position.vehicle.vehicle.id}`,
                 operator,
