@@ -182,7 +182,7 @@ async function getOperatorGTFSDataFeed(operator) {
             for (let filename of Object.keys(contents.files)) {
               const data = await zip.file(filename).async("string");
               filename = `${filename.split(".txt")[0]}`;
-              const delimiter = /\r\n/;
+              const delimiter = /\r?\n/;
               const parts = data.split(delimiter);
               const header = parts.shift();
               const rows = parts.join("\r\n");

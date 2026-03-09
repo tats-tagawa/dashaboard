@@ -242,7 +242,6 @@ async function getPositions(db, operator) {
  */
 async function updatePositions(db) {
   console.log("Updating Positions");
-  await deleteTableData(db, "positions");
   try {
     const positions = await getVehiclePositions();
     const client = await db.connect();
@@ -430,7 +429,8 @@ async function updateOperatorShapes(db, data, operator) {
   const rows = data.split("\r\n");
   const rowsData = rows
     .map((row) => [operator].concat(row.split(",")))
-    .filter((r) => r.length === 6);
+    .filter((r) => r.length >= 5 && r.length <= 6)
+    .map((r) => { while (r.length < 6) r.push(null); return r; });
   await bulkInsert(
     db,
     `INSERT INTO shapes
@@ -535,8 +535,8 @@ async function updateOperatorStops(db, data, operator) {
   for (const row of rows) {
     const parsed = parseCSVRowWithEmpties(row);
     if (!parsed) continue;
-  const stopsData = [operator].concat(parsed);  // tripData defined here
-  while (stopsData.length < 11) stopsData.push(null);  // used here, inside the loop
+  const stopsData = [operator].concat(parsed);
+  while (stopsData.length < 14) stopsData.push(null);
     rowsData.push(stopsData);
   }
   await bulkInsert(

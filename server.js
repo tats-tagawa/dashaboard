@@ -57,6 +57,7 @@ app.get("/positions", async (req, res) => {
     res.send(positions);
   } catch (error) {
     console.error(error);
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -70,6 +71,7 @@ app.get("/shapes", async (req, res) => {
     res.send(tripCoordinates);
   } catch (error) {
     console.error(error);
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -79,6 +81,7 @@ app.get("/operators", async (req, res) => {
     res.send(data);
   } catch (error) {
     console.error(error);
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -88,6 +91,7 @@ app.get("/operator", async (req, res) => {
     res.send(data);
   } catch (error) {
     console.error(error);
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -97,6 +101,7 @@ app.get("/active-operators", async (req, res) => {
     res.send(data);
   } catch (error) {
     console.error(error);
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -108,6 +113,7 @@ app.post("/shapes", async (req, res) => {
     res.send(data);
   } catch (error) {
     console.error(error);
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -119,5 +125,6 @@ app.post("/trip-stops", async (req, res) => {
     res.send(data);
   } catch (error) {
     console.error(error);
+    res.status(500).json({ error: "Internal server error" });
   }
 });

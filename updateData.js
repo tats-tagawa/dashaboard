@@ -3,6 +3,6 @@ import { connectDB, createAllTables, updateOperatorDataTable, updateOperators, u
 const db = connectDB();
 await createAllTables(db);
 await updateOperators(db);
-// await updateOperatorDataTable(db, "PG");
-await updateAllOperators(db);
+await updateOperatorDataTable(db, "BA");
+// await updateAllOperators(db);
 process.exit(0);
