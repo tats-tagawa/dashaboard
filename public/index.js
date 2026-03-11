@@ -262,11 +262,16 @@
 
       // Create GeoJSON with route coodinates of active transit lines
       const shapes = await getAllShapeCoordinates(operator, shapeIds);
+      // Only render one shape per routeId
+      const seen = new Set();
       for (const position of positions) {
         const tripId = position.properties.tripId;
         const shapeId = position.properties.shapeId;
+        const routeId = position.properties.routeId; // dedupe by route
         const coordinates = shapes[shapeId];
-        if (!tripId || !shapeId) continue;
+        if (!tripId || !shapeId || !coordinates) continue;
+        if (seen.has(routeId)) continue; // skip if we already have this route
+        seen.add(routeId);
         const properties = {
           operator: operator,
           shapeId: shapeId,
